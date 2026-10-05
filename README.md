@@ -22,7 +22,7 @@ Android 8.0 이상입니다. APK를 다운로드해 설치하고, 출처 허용�
 수정해도 이미 실행한 날짜의 완료 기록은 유지됩니다. 같은 날짜에 다시 실행할 새 예약이 필요하면 별도 예약을 추가하세요. OFF 중 지난 알림은 ON 시 몰아서 재생하지 않습니다.
 
 ## GitHub에서 APK 만들기
-저장소에 이 소스 전체를 업로드하면 Actions의 Build NearVoice APK가 검사 후 APK를 생성합니다. 실행 상세의 Artifacts에서 NearVoice-install-APK를 내려받고 ZIP 내부 app-debug.apk를 설치하세요. 저장소에는 .github/workflows/android.yml도 반드시 포함해야 합니다.
+GitHub Releases의 v1.0.0에서 app-debug.apk를 바로 내려받아 설치할 수 있습니다. 소스를 수정하면 Actions의 Build NearVoice APK가 테스트·lint 검사 후 APK를 생성하고 릴리스 파일을 갱신합니다. 실행 상세의 Artifacts에서도 NearVoice-install-APK ZIP을 내려받을 수 있습니다. 저장소에는 .github/workflows/android.yml이 포함되어 있습니다.
 
 이 빌드는 개발용 서명 APK입니다. 소스에 공개 테스트 키(signing/nearvoice-debug.jks)를 포함해 로컬 APK와 GitHub APK가 같은 테스트 서명을 사용하도록 했습니다. 이는 개인 테스트 전용이며 공개 키이므로 앱 제작자 인증 용도로 신뢰하지 마세요. 실제 배포에는 별도 비공개 릴리스 키를 GitHub Secrets에 보관해야 합니다. 기존 앱을 삭제하면 저장된 예약도 삭제됩니다. 공개 테스트 키 외 개인 릴리스 키는 공개 저장소에 올리지 마세요.
 
@@ -34,7 +34,7 @@ JDK17, SDK35, Gradle8.11.1, AGP8.9.1, Kotlin2.1.0:
 
 ## 제한과 검증 상태
 - 로컬 규칙 단위 테스트 15개 및 전체 Kotlin SDK 컴파일을 확인했습니다.
-- 이 실행 환경에서 Gradle 데몬의 네트워크 접근이 실패하여, 설치 APK는 SDK aapt2·d8·apksigner와 Kotlin 컴파일러로 생성합니다. GitHub CI의 실제 실행은 저장소 업로드 후 확인해야 합니다.
+- GitHub Actions에서 testDebugUnitTest·lintDebug·assembleDebug가 성공했습니다. 릴리스 APK는 이 검사를 통과한 GitHub 빌드 결과입니다. 최초 로컬 APK도 SDK aapt2·d8·apksigner와 Kotlin 컴파일러로 별도 생성해 서명을 검증했습니다.
 - 실제 휴대폰 UI, 화면 OFF 음성·진동, 실제 위치 이동, 절전·재부팅은 아직 검증하지 않았습니다. 첫 설치 후 음성 테스트와 짧은 시간 예약으로 확인하세요.
 - 위치 업데이트는 약 15초/10m 요청이며 실제 간격·정확도는 기기·GPS·절전 상태에 따라 달라집니다. 100m 이상 반경을 권장합니다.
 - 재부팅 시 시간 예약을 복구하며 위치 감지는 앱을 열어 다시 켜야 합니다. Android 강제 종료 후에는 앱 재실행이 필요합니다.
