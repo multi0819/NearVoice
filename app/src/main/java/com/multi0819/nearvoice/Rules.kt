@@ -1,6 +1,7 @@
 package com.multi0819.nearvoice
 import java.time.*
 object Rules {
+ fun notificationOnly(watchMode:Boolean,interactive:Boolean,isTest:Boolean):Boolean = watchMode&&!interactive&&!isTest
  fun nextTime(r:Reservation,after:ZonedDateTime):ZonedDateTime? {
   if(!r.enabled || r.trigger=="LOCATION")return null
   val time=runCatching{LocalTime.parse(r.time)}.getOrNull()?:return null

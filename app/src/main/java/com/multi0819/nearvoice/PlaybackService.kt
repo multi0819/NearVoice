@@ -47,6 +47,9 @@ class PlaybackService:Service(){
   current=key
   if(condition!="TEST")Store.complete(this,snapshot.id,condition,date)
   val reservation=r?:snapshot
+  if(Rules.notificationOnly(Store.prefs(this).getBoolean("watch_mode",false),getSystemService(PowerManager::class.java).isInteractive,condition=="TEST")){
+   Notices.watchAlert(this,reservation);finishCurrent();return
+  }
   getSystemService(NotificationManager::class.java).notify(202,Notices.build(this,"playback",reservation.title,reservation.message,true))
   Notices.alert(this,reservation.title,reservation.message,reservation.id.hashCode())
   val audio=getSystemService(AudioManager::class.java);val attributes=AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ALARM).setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build()

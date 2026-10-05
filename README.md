@@ -22,7 +22,7 @@ Android 8.0 이상입니다. APK를 다운로드해 설치하고, 출처 허용�
 예약 수정 후 예약 저장을 누르면 완료 기록을 초기화해 같은 날짜에도 다시 실행할 수 있습니다. 단순 ON/OFF 변경은 완료 기록을 유지합니다. OFF 중 지난 알림은 ON 시 몰아서 재생하지 않습니다.
 
 ## GitHub에서 APK 만들기
-GitHub Releases의 v1.0.2에서 app-debug.apk를 바로 내려받아 설치할 수 있습니다. 소스를 수정하면 Actions의 Build NearVoice APK가 테스트·lint 검사 후 APK를 생성하고 릴리스 파일을 갱신합니다. 실행 상세의 Artifacts에서도 NearVoice-install-APK ZIP을 내려받을 수 있습니다. 저장소에는 .github/workflows/android.yml이 포함되어 있습니다.
+GitHub Releases의 v1.0.3에서 app-debug.apk를 바로 내려받아 설치할 수 있습니다. 소스를 수정하면 Actions의 Build NearVoice APK가 테스트·lint 검사 후 APK를 생성하고 릴리스 파일을 갱신합니다. 실행 상세의 Artifacts에서도 NearVoice-install-APK ZIP을 내려받을 수 있습니다. 저장소에는 .github/workflows/android.yml이 포함되어 있습니다.
 
 이 빌드는 개발용 서명 APK입니다. 소스에 공개 테스트 키(signing/nearvoice-debug.jks)를 포함해 로컬 APK와 GitHub APK가 같은 테스트 서명을 사용하도록 했습니다. 이는 개인 테스트 전용이며 공개 키이므로 앱 제작자 인증 용도로 신뢰하지 마세요. 실제 배포에는 별도 비공개 릴리스 키를 GitHub Secrets에 보관해야 합니다. 기존 앱을 삭제하면 저장된 예약도 삭제됩니다. 공개 테스트 키 외 개인 릴리스 키는 공개 저장소에 올리지 마세요.
 
@@ -33,7 +33,7 @@ JDK17, SDK35, Gradle8.11.1, AGP8.9.1, Kotlin2.1.0:
 ```
 
 ## 제한과 검증 상태
-- 로컬 규칙 단위 테스트 18개 및 전체 Kotlin SDK 컴파일을 확인했습니다.
+- 로컬 규칙 단위 테스트 19개 및 전체 Kotlin SDK 컴파일을 확인했습니다.
 - GitHub Actions에서 testDebugUnitTest·lintDebug·assembleDebug가 성공했습니다. 릴리스 APK는 이 검사를 통과한 GitHub 빌드 결과입니다. 최초 로컬 APK도 SDK aapt2·d8·apksigner와 Kotlin 컴파일러로 별도 생성해 서명을 검증했습니다.
 - 실제 휴대폰 UI, 화면 OFF 음성·진동, 실제 위치 이동, 절전·재부팅은 아직 검증하지 않았습니다. 첫 설치 후 음성 테스트와 짧은 시간 예약으로 확인하세요.
 - 위치 업데이트는 약 15초/10m 요청이며 실제 간격·정확도는 기기·GPS·절전 상태에 따라 달라집니다. 100m 이상 반경을 권장합니다.
@@ -48,3 +48,6 @@ JDK17, SDK35, Gradle8.11.1, AGP8.9.1, Kotlin2.1.0:
 
 ### v1.0.2 수정
 설정·예약 수정 화면에서 뒤로가기는 목록으로 돌아갑니다. 목록에서 뒤로가기는 화면을 닫습니다. 전체 알림 ON 상태는 유지합니다. Android 13 이상 뒤로가기 콜백도 지원합니다.
+
+### v1.0.3 워치 모드
+설정의 워치 모드를 켜면 화면 OFF에서 직접 음성·알림음·진동을 실행하지 않고 일반 예약 알림만 게시합니다. Galaxy Wearable의 NearVoice 알림과 휴대전화 알림 끄기를 켜야 워치에 알리고 휴대폰 시스템 진동을 억제합니다. 화면 ON과 미리 듣기는 기존 휴대폰 재생을 유지합니다. 워치 연결 감지나 워치 음성 재생은 제공하지 않습니다. 연결되지 않아도 화면 OFF에서 휴대폰 직접 재생을 하지 않으므로 워치를 사용하지 않을 때는 워치 모드를 끄세요. 실제 워치 전달은 기기에서 검증해야 합니다.

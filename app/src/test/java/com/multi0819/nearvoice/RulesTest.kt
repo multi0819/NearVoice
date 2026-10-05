@@ -119,4 +119,10 @@ class RulesTest {
   assertTrue(q.add(revised));assertFalse(q.add(revised))
   q.done(old);assertEquals(revised,q.poll())
  }
+ @Test fun watchModeUsesNotificationsOnlyWhenScreenIsOff() {
+  assertTrue(Rules.notificationOnly(true,false,false))
+  assertFalse(Rules.notificationOnly(true,true,false))
+  assertFalse(Rules.notificationOnly(false,false,false))
+  assertFalse(Rules.notificationOnly(true,false,true))
+ }
 }
