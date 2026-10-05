@@ -24,14 +24,18 @@ class LocationService:Service(),LocationListener {
   if(!Store.read(this).enabled||!permitted(this)){stopSelf();return START_NOT_STICKY}
   try {startForeground(101,Notices.build(this,"monitor","NearVoice · 감지 ON","목적지 접근을 확인하고 있습니다.",true))
    running=true;manager.removeUpdates(this)
-   for(p in listOf(LocationManager.GPS_PROVIDER,LocationManager.NETWORK_PROVIDER))if(p in manager.allProviders)manager.requestLocationUpdates(p,15000L,10f,this)
+   for(p in listOf(LocationManager.GPS_PROVIDER,LocationManager.NETWORK_PROVIDER))if(p in manager.allProviders)manager.requestLocationUpdates(p,15000L,0f,this)
    status=if(if(Build.VERSION.SDK_INT>=28)manager.isLocationEnabled else manager.isProviderEnabled(LocationManager.GPS_PROVIDER)||manager.isProviderEnabled(LocationManager.NETWORK_PROVIDER))"위치 수신 대기"else"기기 위치 설정 OFF"
+   // Saving a reservation must evaluate an already occupied destination immediately.
+   val recent=(listOfNotNull(latest)+listOf(LocationManager.GPS_PROVIDER,LocationManager.NETWORK_PROVIDER).mapNotNull{p->runCatching{manager.getLastKnownLocation(p)}.getOrNull()})
+    .filter{it.hasAccuracy()&&Rules.locationUsable(SystemClock.elapsedRealtimeNanos()-it.elapsedRealtimeNanos,it.accuracy.toDouble())}.maxByOrNull{it.elapsedRealtimeNanos}
+   if(recent!=null&&(if(Build.VERSION.SDK_INT>=28)manager.isLocationEnabled else manager.isProviderEnabled(LocationManager.GPS_PROVIDER)||manager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)))onLocationChanged(recent)
   }catch(_:SecurityException){status="위치 권한 필요";Store.error(this,status);stopSelf()}
   return START_STICKY
  }
  override fun onLocationChanged(l:Location){
   val s=Store.read(this);if(!s.enabled){stopSelf();return}
-  if(SystemClock.elapsedRealtimeNanos()-l.elapsedRealtimeNanos>120_000_000_000L||!l.hasAccuracy()||l.accuracy>100f)return
+  if(!l.hasAccuracy()||!Rules.locationUsable(SystemClock.elapsedRealtimeNanos()-l.elapsedRealtimeNanos,l.accuracy.toDouble()))return
   latest=l;status="감지 중 · 정확도 ±${l.accuracy.toInt()}m"
   val today=LocalDate.now()
   val currentKeys=s.reservations.map{"${it.id}:${it.revision}"}.toSet();tracker.retain(currentKeys)

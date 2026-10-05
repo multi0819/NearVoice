@@ -1,6 +1,7 @@
 package com.multi0819.nearvoice
 import java.time.*
 object Rules {
+ fun locationUsable(ageNanos:Long,accuracy:Double):Boolean = ageNanos in 0L..120_000_000_000L&&accuracy.isFinite()&&accuracy in 0.0..100.0
  fun notificationOnly(watchMode:Boolean,interactive:Boolean,isTest:Boolean):Boolean = watchMode&&!interactive&&!isTest
  fun nextTime(r:Reservation,after:ZonedDateTime):ZonedDateTime? {
   if(!r.enabled || r.trigger=="LOCATION")return null

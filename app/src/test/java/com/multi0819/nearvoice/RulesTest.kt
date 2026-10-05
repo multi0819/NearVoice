@@ -125,4 +125,20 @@ class RulesTest {
   assertFalse(Rules.notificationOnly(false,false,false))
   assertFalse(Rules.notificationOnly(true,false,true))
  }
+ @Test fun cachedLocationMustBeRecentAccurateAndNotFromFuture(){
+  assertTrue(Rules.locationUsable(120_000_000_000L,11.0))
+  assertFalse(Rules.locationUsable(120_000_000_001L,11.0))
+  assertFalse(Rules.locationUsable(-1,11.0))
+  assertFalse(Rules.locationUsable(0,101.0))
+  assertFalse(Rules.locationUsable(0,Double.NaN))
+ }
+ @Test fun locationModeIgnoresClockAndRearmCanDeliverInsideToday(){
+  val today=LocalDate.parse("2026-10-06")
+  val r=Reservation(id="stationary",message="알림",trigger="LOCATION",time="09:00",place=Place("회사",37.4060459,127.0896802),dates=setOf(today.toString()),radius=300.0,revision=1)
+  assertTrue(Rules.locationAllowed(r,today));assertNull(Rules.nextTime(r,at("2026-10-06T07:47")))
+  val tracker=EntryTracker();assertTrue(tracker.update(r.id,1,75.0,r.radius,today.toString()).fire)
+  val saved=Rules.mergeSaved(r.copy(revision=2),r,true)
+  assertTrue(tracker.update(saved.id,saved.revision,75.0,saved.radius,today.toString()).fire)
+  assertTrue(Rules.canDeliver(saved,true,"LOCATION",today.toString(),2))
+ }
 }

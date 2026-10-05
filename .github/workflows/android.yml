@@ -36,9 +36,9 @@ jobs:
       - name: Publish install APK
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.0.11
-          name: NearVoice v1.0.11 (테스트용)
-          body: 구글 지도 공유 시 교차로 등 일부 장소에서 좌표를 가져오지 못하던 문제를 수정했습니다. 장소별 응답 형식 차이를 처리하고 동일 장소 ID를 검증합니다. 휴대폰만 업데이트하세요.
+          tag_name: v1.0.12
+          name: NearVoice v1.0.12 (테스트용)
+          body: 위치 예약 저장 직후 최신 위치로 다시 검사합니다. 정지 중에도 위치를 갱신하며 오래되거나 부정확한 위치는 사용하지 않습니다. 휴대폰만 업데이트하세요.
           files: |
             NearVoice-phone.apk
             NearVoice-watch.apk
