@@ -141,4 +141,12 @@ class RulesTest {
   assertTrue(tracker.update(saved.id,saved.revision,75.0,saved.radius,today.toString()).fire)
   assertTrue(Rules.canDeliver(saved,true,"LOCATION",today.toString(),2))
  }
+ @Test fun locationDiagnosticDistinguishesDateCompletionAndEntry(){
+  val d=LocalDate.parse("2026-10-06");val r=Reservation(trigger="LOCATION",dates=setOf(d.toString()))
+  assertEquals("반경 안 · 알림 요청",Rules.locationDiagnostic(r,d,75.0,Entry(true,true)))
+  assertEquals("반경 안 · 이미 진입 처리됨",Rules.locationDiagnostic(r,d,75.0,Entry(true,false)))
+  assertEquals("반경 밖",Rules.locationDiagnostic(r,d,400.0,Entry(false,false)))
+  assertEquals("오늘은 선택한 날짜/요일이 아님",Rules.locationDiagnostic(r,d.plusDays(1),75.0,Entry(true,true)))
+  assertEquals("오늘 위치 알림 실행 기록 있음",Rules.locationDiagnostic(r.copy(completed=mutableSetOf("LOCATION:$d")),d,75.0,Entry(true,true)))
+ }
 }

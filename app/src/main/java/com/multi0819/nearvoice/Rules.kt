@@ -1,6 +1,16 @@
 package com.multi0819.nearvoice
 import java.time.*
 object Rules {
+ fun locationDiagnostic(r:Reservation,date:LocalDate,distance:Double,e:Entry):String = when {
+  !r.enabled->"예약 OFF"
+  r.trigger=="TIME"->"시간 예약"
+  r.repeat in setOf("DATES","ONCE")&&"LOCATION:$date" in r.completed->"오늘 위치 알림 실행 기록 있음"
+  !locationAllowed(r,date)->"오늘은 선택한 날짜/요일이 아님"
+  !distance.isFinite()->"거리 확인 불가"
+  e.fire->"반경 안 · 알림 요청"
+  e.inside->"반경 안 · 이미 진입 처리됨"
+  else->"반경 밖"
+ }
  fun locationUsable(ageNanos:Long,accuracy:Double):Boolean = ageNanos in 0L..120_000_000_000L&&accuracy.isFinite()&&accuracy in 0.0..100.0
  fun notificationOnly(watchMode:Boolean,interactive:Boolean,isTest:Boolean):Boolean = watchMode&&!interactive&&!isTest
  fun nextTime(r:Reservation,after:ZonedDateTime):ZonedDateTime? {

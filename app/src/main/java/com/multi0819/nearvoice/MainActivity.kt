@@ -10,6 +10,7 @@ import android.widget.*
 import java.time.*
 class MainActivity:Activity(){
  private val handler=Handler(Looper.getMainLooper());private var statusView:TextView?=null;private var nextView:TextView?=null;private var warningsView:TextView?=null
+ private val locationViews=mutableMapOf<String,TextView>()
  var subpage=false
  var placeCallback:((Place)->Unit)?=null;var soundCallback:((String?)->Unit)?=null
  private val update=object:Runnable{override fun run(){updateStatus();handler.postDelayed(this,2500)}}
@@ -26,7 +27,7 @@ class MainActivity:Activity(){
  override fun onPause(){handler.removeCallbacks(update);super.onPause()}
  fun toast(s:String){Toast.makeText(this,s,Toast.LENGTH_LONG).show()}
  fun change(action:()->Unit){try{action()}catch(e:Exception){toast(e.message?:"저장에 실패했습니다.")}}
- fun dashboard(){placeCallback=null;subpage=false;statusView=null;nextView=null;val c=Ui.page(this,"NearVoice");c.addView(Ui.label(this,"PROXIMITY / SCHEDULE",12f,Ui.muted))
+ fun dashboard(){locationViews.clear();placeCallback=null;subpage=false;statusView=null;nextView=null;val c=Ui.page(this,"NearVoice");c.addView(Ui.label(this,"PROXIMITY / SCHEDULE · v${packageManager.getPackageInfo(packageName,0).versionName}",12f,Ui.muted))
   val state=Store.read(this);val toggle=Ui.toggle(this,"전체 알림 ON / OFF",state.enabled);c.addView(toggle)
   toggle.setOnCheckedChangeListener{_,on->change{if(on){if(!checkPermissions()){toggle.isChecked=false;return@change};Store.enable(this,true);if(Store.read(this).reservations.any{it.enabled&&it.trigger!="TIME"})LocationService.start(this)}else{Store.enable(this,false);LocationService.stop(this);stopService(Intent(this,PlaybackService::class.java))};updateStatus()}}
   statusView=Ui.label(this,"",14f,Ui.accent);c.addView(statusView);nextView=Ui.label(this,"",14f,Ui.muted);c.addView(nextView);warningsView=Ui.label(this,"",13f,android.graphics.Color.rgb(255,184,107));c.addView(warningsView)
@@ -37,15 +38,22 @@ class MainActivity:Activity(){
   state.reservations.forEach{r->val card=Ui.column(this);card.background=Ui.shape();val on=Ui.toggle(this,r.title,r.enabled);card.addView(on)
    on.setOnCheckedChangeListener{_,v->change{Store.upsert(this,r.copy(enabled=v,revision=System.currentTimeMillis()));if(Store.read(this).enabled&&v&&r.trigger!="TIME"&&checkPermissions())LocationService.start(this)}}
    card.addView(Ui.label(this,r.message,17f));val mode=when(r.trigger){"TIME"->"시간";"LOCATION"->"위치";else->"위치 + 시간"}
-   val repeat=when(r.repeat){"DAILY"->"매일";"WEEKDAYS"->"요일 ${r.weekdays.sorted().joinToString(",")}";else->"${r.dates.size}개 날짜"}
-   card.addView(Ui.label(this,"$mode · $repeat · ${r.time}\n${r.place?.label?:"시간 예약"}${if(r.place!=null)" · ${r.radius.toInt()}m" else ""}",13f,Ui.muted))
+   val repeat=when(r.repeat){"DAILY"->"매일";"WEEKDAYS"->"요일 ${r.weekdays.sorted().joinToString(",")}";else->r.dates.sorted().joinToString(", ")}
+   card.addView(Ui.label(this,"$mode · $repeat${if(r.trigger=="LOCATION")""else" · ${r.time}"}\n${r.place?.label?:"시간 예약"}${if(r.place!=null)" · ${r.radius.toInt()}m" else ""}",13f,Ui.muted))
+   if(r.trigger!="TIME"){val detail=Ui.label(this,"위치 검사 대기",13f,Ui.accent);card.addView(detail);locationViews[r.id]=detail}
    val completed=r.completed.size;if(completed>0)card.addView(Ui.label(this,"실행 기록 ${completed}건",12f,Ui.muted))
    val buttons=Ui.row(this);Ui.weighted(buttons,Ui.button(this,"수정"){openEditor(r)});Ui.weighted(buttons,Ui.button(this,"테스트"){PlaybackService.test(this,r)})
    Ui.weighted(buttons,Ui.button(this,"삭제"){AlertDialog.Builder(this).setTitle("예약 삭제").setMessage("${r.title} 예약을 삭제할까요?").setPositiveButton("삭제"){_,_->change{Store.delete(this,r.id);dashboard()}}.setNegativeButton("취소",null).show()});card.addView(buttons);c.addView(card);c.addView(Ui.space(this))
   };updateStatus()
  }
  private fun updateStatus(){val s=Store.read(this);val l=LocationService.latest
-  statusView?.text=if(!s.enabled)"● 전체 알림 OFF" else "● ${if(LocationService.running)LocationService.status else "위치 감지 대기 / 시간 예약 ON"}${if(l!=null)"\n%.5f, %.5f".format(l.latitude,l.longitude)else ""}"
+  val p=Store.prefs(this)
+  s.reservations.forEach{r->locationViews[r.id]?.text=buildList{
+   add(if(p.getLong("location_check_revision_${r.id}",-1)==r.revision)p.getString("location_check_${r.id}","위치 검사 대기")?:"위치 검사 대기"else"이 예약 저장 후 위치 검사 대기")
+   if(p.getLong("delivery_revision_${r.id}",-1)==r.revision)p.getString("delivery_${r.id}",null)?.let{add(it)}
+  }.joinToString("\n")}
+
+  statusView?.text=if(!s.enabled)"● 전체 알림 OFF" else "● ${if(LocationService.running)LocationService.status else "위치 감지 대기 / 시간 예약 ON"}${if(l!=null)"\n%.5f, %.5f · %d초 전 수신".format(l.latitude,l.longitude,((SystemClock.elapsedRealtimeNanos()-l.elapsedRealtimeNanos)/1_000_000_000L).coerceAtLeast(0))else ""}"
   warningsView?.text=Rules.healthWarnings(getSystemService(NotificationManager::class.java).areNotificationsEnabled(),getSystemService(android.media.AudioManager::class.java).getStreamVolume(android.media.AudioManager.STREAM_ALARM),Store.prefs(this).getString("error",null)).joinToString("\n")
   val next=s.reservations.mapNotNull{r->Rules.nextTime(r,ZonedDateTime.now())?.let{r.title to it}}.minByOrNull{it.second.toInstant()}
   nextView?.text=if(!s.enabled)"예약을 켜면 감지를 시작합니다."else if(!TimeScheduler.exactAllowed(this))"정확한 알람 권한 필요 · 설정에서 허용" else next?.let{"다음 시간 알림 · ${it.first}\n${it.second.toLocalDate()} ${it.second.toLocalTime()}"}?:"다음 시간 알림 없음"

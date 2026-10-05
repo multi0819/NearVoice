@@ -14,8 +14,9 @@ class PlaybackService:Service(){
  private var sound:Ringtone?=null;private var focus:AudioFocusRequest?=null;private var lock:PowerManager.WakeLock?=null
  private val finishTimeout=Runnable{finishCurrent()}
  companion object {
-  fun enqueue(c:Context,r:Reservation,condition:String,date:String){try{c.startForegroundService(Intent(c,PlaybackService::class.java).putExtra("reservation",Codec.json(r).toString()).putExtra("condition",condition).putExtra("date",date))}
-   catch(e:RuntimeException){Store.error(c,"자동 읽기를 시작하지 못했습니다. 앱에서 권한을 확인하세요.");Notices.alert(c,r.title,r.message)}
+  private fun report(c:Context,r:Reservation,condition:String,message:String){if(condition!="TEST")Store.prefs(c).edit().putLong("delivery_revision_${r.id}",r.revision).putString("delivery_${r.id}","${java.time.LocalTime.now().withNano(0)} · $message").apply()}
+  fun enqueue(c:Context,r:Reservation,condition:String,date:String){report(c,r,condition,"자동 알림 시작 요청");try{c.startForegroundService(Intent(c,PlaybackService::class.java).putExtra("reservation",Codec.json(r).toString()).putExtra("condition",condition).putExtra("date",date))}
+   catch(e:RuntimeException){report(c,r,condition,"자동 알림 시작 실패");Store.error(c,"자동 읽기를 시작하지 못했습니다. 앱에서 권한을 확인하세요.");Notices.alert(c,r.title,r.message)}
   }
   fun test(c:Context,r:Reservation){enqueue(c,r,"TEST",java.time.LocalDate.now().toString())}
  }
@@ -38,18 +39,19 @@ class PlaybackService:Service(){
   if(i==null){stopSelf();return START_NOT_STICKY}
   val r=runCatching{Codec.reservation(JSONObject(i.getStringExtra("reservation")?:""))}.getOrNull()?:run{stopSelf();return START_NOT_STICKY}
   val condition=i.getStringExtra("condition")?:"TEST";val date=i.getStringExtra("date")?:"";val key=Rules.eventKey(r.id,condition,date,r.revision)
-  if(queue.add(key))events[key]=Triple(r,condition,date)
+  report(this,r,condition,"자동 알림 요청 수신");if(queue.add(key))events[key]=Triple(r,condition,date)
   next();return START_NOT_STICKY
  }
  private fun next(){if(!initialized||current!=null)return
   val key=queue.poll()?:run{stopSelf();return};val event=events[key]?:run{queue.done(key);next();return}
   val (snapshot,condition,date)=event;val state=Store.read(this);val r=if(condition=="TEST")snapshot else state.reservations.find{it.id==snapshot.id}
-  if(condition!="TEST"&&!Rules.canDeliver(r,state.enabled,condition,date,snapshot.revision)){events.remove(key);queue.done(key);next();return}
+  if(condition!="TEST"&&!Rules.canDeliver(r,state.enabled,condition,date,snapshot.revision)){report(this,snapshot,condition,"예약 변경·OFF·날짜·실행 기록 때문에 취소");events.remove(key);queue.done(key);next();return}
   current=key
+  report(this,snapshot,condition,"자동 알림 조건 통과 · 재생 준비")
   if(condition!="TEST")Store.complete(this,snapshot.id,condition,date)
   val reservation=r?:snapshot
   if(Rules.notificationOnly(Store.prefs(this).getBoolean("watch_mode",false),getSystemService(PowerManager::class.java).isInteractive,condition=="TEST")){
-   WatchBridge.send(this,reservation,key){sent->if(current==key){val freshState=Store.read(this);if(!freshState.enabled||freshState.reservations.none{it.id==reservation.id&&it.enabled&&it.revision==reservation.revision}){finishCurrent();return@send};if(sent)Notices.alert(this,reservation.title,reservation.message,reservation.id.hashCode())else Notices.watchAlert(this,reservation);finishCurrent()}};return
+   WatchBridge.send(this,reservation,key){sent->if(current==key){val freshState=Store.read(this);if(!freshState.enabled||freshState.reservations.none{it.id==reservation.id&&it.enabled&&it.revision==reservation.revision}){finishCurrent();return@send};if(sent){report(this,reservation,condition,"워치 전송 확인");Notices.alert(this,reservation.title,reservation.message,reservation.id.hashCode())}else{report(this,reservation,condition,"워치 음성 전송 불가 · 문자 알림 전달");Notices.watchAlert(this,reservation)};finishCurrent()}};return
   }
   getSystemService(NotificationManager::class.java).notify(202,Notices.build(this,"playback",reservation.title,reservation.message,true))
   Notices.alert(this,reservation.title,reservation.message,reservation.id.hashCode())
@@ -60,6 +62,7 @@ class PlaybackService:Service(){
   if(reservation.soundUri!=null){try{sound=RingtoneManager.getRingtone(this,Uri.parse(reservation.soundUri));sound?.audioAttributes=attributes;sound?.play()}catch(_:Exception){Store.error(this,"선택한 알림음을 재생할 수 없습니다.")}}
   handler.postDelayed({if(current!=key)return@postDelayed;sound?.stop();sound=null
    if(reservation.voice&&ttsOk){tts?.setAudioAttributes(attributes);val status=tts?.speak(reservation.message,TextToSpeech.QUEUE_FLUSH,Bundle(),key)
+    report(this,reservation,condition,if(status==TextToSpeech.SUCCESS)"휴대폰 음성 읽기 요청됨"else"휴대폰 음성 읽기 실패")
     if(status!=TextToSpeech.SUCCESS){Store.error(this,"음성 읽기에 실패했습니다.");finishCurrent()}
     else handler.postDelayed(finishTimeout,120000)
    }else {if(reservation.voice&&!ttsOk)Notices.alert(this,"음성 설정 필요",reservation.message);finishCurrent()}
