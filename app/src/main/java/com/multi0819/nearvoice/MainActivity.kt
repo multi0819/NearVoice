@@ -10,14 +10,15 @@ import android.widget.*
 import java.time.*
 class MainActivity:Activity(){
  private val handler=Handler(Looper.getMainLooper());private var statusView:TextView?=null;private var nextView:TextView?=null;private var warningsView:TextView?=null
+ var subpage=false
  var placeCallback:((Place)->Unit)?=null;var soundCallback:((String?)->Unit)?=null
  private val update=object:Runnable{override fun run(){updateStatus();handler.postDelayed(this,2500)}}
- override fun onCreate(b:Bundle?){super.onCreate(b);Notices.channels(this);dashboard()}
+ override fun onCreate(b:Bundle?){super.onCreate(b);Notices.channels(this);dashboard();if(Build.VERSION.SDK_INT>=33)onBackInvokedDispatcher.registerOnBackInvokedCallback(android.window.OnBackInvokedDispatcher.PRIORITY_DEFAULT){navigateBack()}}
  override fun onResume(){super.onResume();TimeScheduler.reconcile(this);handler.post(update);updateStatus()}
  override fun onPause(){handler.removeCallbacks(update);super.onPause()}
  fun toast(s:String){Toast.makeText(this,s,Toast.LENGTH_LONG).show()}
  fun change(action:()->Unit){try{action()}catch(e:Exception){toast(e.message?:"저장에 실패했습니다.")}}
- fun dashboard(){statusView=null;nextView=null;val c=Ui.page(this,"NearVoice");c.addView(Ui.label(this,"PROXIMITY / SCHEDULE",12f,Ui.muted))
+ fun dashboard(){subpage=false;statusView=null;nextView=null;val c=Ui.page(this,"NearVoice");c.addView(Ui.label(this,"PROXIMITY / SCHEDULE",12f,Ui.muted))
   val state=Store.read(this);val toggle=Ui.toggle(this,"전체 알림 ON / OFF",state.enabled);c.addView(toggle)
   toggle.setOnCheckedChangeListener{_,on->change{if(on){if(!checkPermissions()){toggle.isChecked=false;return@change};Store.enable(this,true);if(Store.read(this).reservations.any{it.enabled&&it.trigger!="TIME"})LocationService.start(this)}else{Store.enable(this,false);LocationService.stop(this);stopService(Intent(this,PlaybackService::class.java))};updateStatus()}}
   statusView=Ui.label(this,"",14f,Ui.accent);c.addView(statusView);nextView=Ui.label(this,"",14f,Ui.muted);c.addView(nextView);warningsView=Ui.label(this,"",13f,android.graphics.Color.rgb(255,184,107));c.addView(warningsView)
@@ -46,7 +47,7 @@ class MainActivity:Activity(){
   if(needed.isNotEmpty()){if(Manifest.permission.ACCESS_FINE_LOCATION in needed)needed.add(Manifest.permission.ACCESS_COARSE_LOCATION);requestPermissions(needed.toTypedArray(),1);toast("권한을 허용한 뒤 전체 알림을 켜주세요.");return false}
   if(!TimeScheduler.exactAllowed(this)){startActivity(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,Uri.parse("package:$packageName")));toast("정확한 알람을 허용한 뒤 다시 켜주세요.");return false};return true
  }
- fun settings(){statusView=null;nextView=null;warningsView=null;val c=Ui.page(this,"설정");c.addView(Ui.button(this,"‹ 예약 목록"){dashboard()});val s=Store.read(this)
+ fun settings(){subpage=true;statusView=null;nextView=null;warningsView=null;val c=Ui.page(this,"설정");c.addView(Ui.button(this,"‹ 예약 목록"){dashboard()});val s=Store.read(this)
   for(home in listOf(true,false)){val p=if(home)s.home else s.work;val title=if(home)"집"else"회사";c.addView(Ui.label(this,"$title · ${p?.label?:"주소 미등록"}",17f));c.addView(Ui.button(this,"$title 주소 등록 / 수정"){pickPlace(p){picked->change{Store.setPlace(this,home,picked);settings()}}})}
   c.addView(Ui.label(this,"권한과 알림",18f));c.addView(Ui.label(this,"위치: ${if(LocationService.permitted(this))"허용"else"필요"}\n정확한 알람: ${if(TimeScheduler.exactAllowed(this))"허용"else"필요"}",14f,Ui.muted))
   c.addView(Ui.button(this,"필요한 권한 허용"){checkPermissions()});c.addView(Ui.button(this,"앱 권한 / 배터리 설정"){startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,Uri.parse("package:$packageName")))})
@@ -62,5 +63,6 @@ class MainActivity:Activity(){
   if(requestCode==10){runCatching{Codec.place(org.json.JSONObject(data?.getStringExtra("place")?:""))}.getOrNull()?.let{placeCallback?.invoke(it)}}
   if(requestCode==11){val uri=if(Build.VERSION.SDK_INT>=33)data?.getParcelableExtra(android.media.RingtoneManager.EXTRA_RINGTONE_PICKED_URI,Uri::class.java)else @Suppress("DEPRECATION") data?.getParcelableExtra<Uri>(android.media.RingtoneManager.EXTRA_RINGTONE_PICKED_URI);soundCallback?.invoke(uri?.toString())}
  }
- @Deprecated("Legacy back API") override fun onBackPressed(){dashboard()}
+ private fun navigateBack(){if(subpage)dashboard()else finish()}
+ @Deprecated("Legacy back API") override fun onBackPressed(){navigateBack()}
 }

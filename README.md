@@ -22,7 +22,7 @@ Android 8.0 이상입니다. APK를 다운로드해 설치하고, 출처 허용�
 예약 수정 후 예약 저장을 누르면 완료 기록을 초기화해 같은 날짜에도 다시 실행할 수 있습니다. 단순 ON/OFF 변경은 완료 기록을 유지합니다. OFF 중 지난 알림은 ON 시 몰아서 재생하지 않습니다.
 
 ## GitHub에서 APK 만들기
-GitHub Releases의 v1.0.1에서 app-debug.apk를 바로 내려받아 설치할 수 있습니다. 소스를 수정하면 Actions의 Build NearVoice APK가 테스트·lint 검사 후 APK를 생성하고 릴리스 파일을 갱신합니다. 실행 상세의 Artifacts에서도 NearVoice-install-APK ZIP을 내려받을 수 있습니다. 저장소에는 .github/workflows/android.yml이 포함되어 있습니다.
+GitHub Releases의 v1.0.2에서 app-debug.apk를 바로 내려받아 설치할 수 있습니다. 소스를 수정하면 Actions의 Build NearVoice APK가 테스트·lint 검사 후 APK를 생성하고 릴리스 파일을 갱신합니다. 실행 상세의 Artifacts에서도 NearVoice-install-APK ZIP을 내려받을 수 있습니다. 저장소에는 .github/workflows/android.yml이 포함되어 있습니다.
 
 이 빌드는 개발용 서명 APK입니다. 소스에 공개 테스트 키(signing/nearvoice-debug.jks)를 포함해 로컬 APK와 GitHub APK가 같은 테스트 서명을 사용하도록 했습니다. 이는 개인 테스트 전용이며 공개 키이므로 앱 제작자 인증 용도로 신뢰하지 마세요. 실제 배포에는 별도 비공개 릴리스 키를 GitHub Secrets에 보관해야 합니다. 기존 앱을 삭제하면 저장된 예약도 삭제됩니다. 공개 테스트 키 외 개인 릴리스 키는 공개 저장소에 올리지 마세요.
 
@@ -45,3 +45,6 @@ JDK17, SDK35, Gradle8.11.1, AGP8.9.1, Kotlin2.1.0:
 
 ### v1.0.1 수정
 완료한 예약도 수정 후 예약 저장하면 실행 기록을 초기화해 다시 실행합니다. 단순 ON/OFF는 실행 기록을 유지합니다. 시간 예약은 앞으로 실행할 날짜와 시간을 선택하세요.
+
+### v1.0.2 수정
+설정·예약 수정 화면에서 뒤로가기는 목록으로 돌아갑니다. 목록에서 뒤로가기는 화면을 닫습니다. 전체 알림 ON 상태는 유지합니다. Android 13 이상 뒤로가기 콜백도 지원합니다.
