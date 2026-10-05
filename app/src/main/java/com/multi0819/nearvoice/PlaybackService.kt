@@ -23,8 +23,9 @@ class PlaybackService:Service(){
  override fun onCreate(){super.onCreate();startForeground(202,Notices.build(this,"playback","NearVoice","알림 준비 중",true))
   lock=getSystemService(PowerManager::class.java).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK,"NearVoice:playback").apply{acquire(180000)}
   tts=TextToSpeech(this){result->handler.post{
-   initialized=true;val language=if(result==TextToSpeech.SUCCESS)tts?.setLanguage(Locale.KOREAN)?:TextToSpeech.ERROR else TextToSpeech.ERROR
+   initialized=true;val language=if(result==TextToSpeech.SUCCESS){if(tts?.voice?.locale?.language==Locale.KOREAN.language)TextToSpeech.LANG_AVAILABLE else tts?.setLanguage(Locale.KOREAN)?:TextToSpeech.ERROR}else TextToSpeech.ERROR
    ttsOk=language>=TextToSpeech.LANG_AVAILABLE
+   tts?.setSpeechRate(0.9f);tts?.setPitch(0.95f)
    if(!ttsOk)Store.error(this,"한국어 음성 엔진 또는 음성 데이터가 없습니다. 설정에서 음성 테스트를 확인하세요.")
    tts?.setOnUtteranceProgressListener(object:UtteranceProgressListener(){override fun onStart(id:String?){}
     override fun onDone(id:String?){handler.post{if(id==current)finishCurrent()}}
@@ -52,7 +53,7 @@ class PlaybackService:Service(){
   }
   getSystemService(NotificationManager::class.java).notify(202,Notices.build(this,"playback",reservation.title,reservation.message,true))
   Notices.alert(this,reservation.title,reservation.message,reservation.id.hashCode())
-  val audio=getSystemService(AudioManager::class.java);val attributes=AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ALARM).setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build()
+  val audio=getSystemService(AudioManager::class.java);val attributes=AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA).setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build()
   focus=AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK).setAudioAttributes(attributes).setOnAudioFocusChangeListener{change->if(change==AudioManager.AUDIOFOCUS_LOSS)handler.post{finishCurrent()}}.build()
   audio.requestAudioFocus(focus!!)
   if(reservation.vibration){try{getSystemService(Vibrator::class.java).vibrate(VibrationEffect.createWaveform(longArrayOf(0,250,150,250),-1))}catch(_:SecurityException){}}
