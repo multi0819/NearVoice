@@ -18,7 +18,7 @@ class MainActivity:Activity(){
  private fun receiveMap(i:Intent){if(i.action!=Intent.ACTION_SEND||i.type!="text/plain")return
   val shared=i.getStringExtra(Intent.EXTRA_TEXT)?.take(12000)?:return
   if(MapsShare.url(shared)==null){toast("구글 지도 장소의 공유 링크를 선택하세요.");return}
-  if(placeCallback==null)placeCallback={p->openEditor(Reservation(trigger="LOCATION",place=p))}
+  if(placeCallback==null)placeCallback={p->openEditor(null,p)}
   startActivityForResult(Intent(this,PlacePicker::class.java).putExtra("shared_map",shared),10)
   i.action=null
  }

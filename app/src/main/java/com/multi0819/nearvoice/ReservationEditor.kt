@@ -7,7 +7,7 @@ import android.text.InputType
 import android.view.View
 import android.widget.*
 import java.time.*
-fun MainActivity.openEditor(original:Reservation?){subpage=true;val base=original?:Reservation();val c=Ui.page(this,if(original==null)"예약 추가"else"예약 수정")
+fun MainActivity.openEditor(original:Reservation?,initialPlace:Place?=null){subpage=true;val base=original?:Reservation(place=initialPlace,trigger=if(initialPlace==null)"TIME"else"LOCATION");val c=Ui.page(this,if(original==null)"예약 추가"else"예약 수정")
  c.addView(Ui.button(this,"‹ 취소 / 목록"){dashboard()});val title=Ui.edit(this,"예약 제목",base.title);c.addView(title);c.addView(Ui.space(this));val message=Ui.edit(this,"읽어줄 메시지",base.message,true);c.addView(message)
  c.addView(Ui.label(this,"알림 조건",16f));val modes=listOf("TIME","LOCATION","BOTH");val trigger=Ui.spinner(this,listOf("시간 알림","위치 알림","위치 + 시간"),modes.indexOf(base.trigger).coerceAtLeast(0));c.addView(trigger)
  var place=base.place;val placeText=Ui.label(this,place?.label?:"목적지를 선택하세요",14f,Ui.muted);val placeBox=Ui.column(this);placeBox.addView(placeText);val places=Ui.row(this)
