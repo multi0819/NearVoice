@@ -42,7 +42,7 @@ object Rules {
   if(condition!="TIME"||r.trigger=="LOCATION")return false
   return when(r.repeat){"DATES","ONCE"->date in r.dates;"WEEKDAYS"->d.dayOfWeek.value in r.weekdays;else->true}
  }
- fun mergeSaved(incoming:Reservation,current:Reservation?):Reservation = incoming.copy(completed=(incoming.completed+(current?.completed?:emptySet())).toMutableSet())
+ fun mergeSaved(incoming:Reservation,current:Reservation?,rearm:Boolean=false):Reservation = incoming.copy(completed=if(rearm)mutableSetOf() else (incoming.completed+(current?.completed?:emptySet())).toMutableSet())
  fun timeScheduleValid(r:Reservation,now:ZonedDateTime,isNew:Boolean):Boolean {
   if(!isNew||r.trigger!="TIME"||r.repeat !in setOf("DATES","ONCE"))return true
   return nextTime(r.copy(enabled=true,completed=mutableSetOf()),now)!=null

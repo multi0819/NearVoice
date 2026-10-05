@@ -32,9 +32,9 @@ jobs:
       - name: Publish install APK
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.0.0
-          name: NearVoice v1.0.0 (테스트용)
-          body: 위치·시간 음성 예약 앱. 최초 설치 후 권한과 한국어 음성 테스트를 확인하세요. 개발용 서명 APK입니다.
+          tag_name: v1.0.1
+          name: NearVoice v1.0.1 (테스트용)
+          body: 완료된 메시지를 수정해 다시 예약하면 실행 기록을 초기화하는 오류 수정. 위치·시간 음성 예약 앱. 최초 설치 후 권한과 한국어 음성 테스트를 확인하세요. 개발용 서명 APK입니다.
           files: app/build/outputs/apk/debug/app-debug.apk
       - uses: actions/upload-artifact@v4
         if: always()

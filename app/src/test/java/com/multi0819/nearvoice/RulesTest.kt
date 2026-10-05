@@ -95,4 +95,20 @@ class RulesTest {
   assertTrue(warnings.contains("알람 볼륨 0 · 소리가 들리지 않을 수 있음"))
   assertTrue(warnings.contains("음성 엔진 없음"))
  }
+ @Test fun savingCompletedMessageRearmsBothConditionsOnSameDate() {
+  val current=Reservation(id="done",message="전 메시지",trigger="BOTH",place=Place("회사",37.0,127.0),dates=setOf("2026-10-05"),time="13:00",revision=1,completed=mutableSetOf("TIME:2026-10-05","LOCATION:2026-10-05"))
+  val saved=Rules.mergeSaved(current.copy(message="수정 메시지",revision=2),current,true)
+  assertEquals(at("2026-10-05T13:00"),Rules.nextTime(saved,at("2026-10-05T12:00")))
+  assertTrue(Rules.canDeliver(saved,true,"TIME","2026-10-05",2))
+  assertTrue(Rules.canDeliver(saved,true,"LOCATION","2026-10-05",2))
+  assertFalse(Rules.canDeliver(saved,true,"TIME","2026-10-05",1))
+  val tracker=EntryTracker();assertTrue(tracker.update(current.id,1,100.0,300.0,"2026-10-05").fire)
+  assertTrue(tracker.update(saved.id,2,100.0,300.0,"2026-10-05").fire)
+ }
+ @Test fun togglingReservationPreservesCompletionRecordedWhileScreenWasOpen() {
+  val stale=Reservation(id="done",revision=1)
+  val current=stale.copy(completed=mutableSetOf("TIME:2026-10-05"))
+  val saved=Rules.mergeSaved(stale.copy(enabled=false,revision=2),current)
+  assertEquals(current.completed,saved.completed)
+ }
 }

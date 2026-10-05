@@ -31,7 +31,7 @@ object Store {
   val j=JSONObject().put("enabled",s.enabled).put("reservations",JSONArray(s.reservations.map{Codec.json(it)})).put("home",Codec.place(s.home)).put("work",Codec.place(s.work))
   check(prefs(c).edit().putString("state",j.toString()).commit()){ "설정을 저장할 공간이 없습니다." }
  }
- @Synchronized fun upsert(c:Context,r:Reservation){ val s=read(c);write(c,s.copy(reservations=s.reservations.filter{it.id!=r.id}+Rules.mergeSaved(r,s.reservations.find{it.id==r.id})));TimeScheduler.reconcile(c) }
+ @Synchronized fun upsert(c:Context,r:Reservation,rearm:Boolean=false){ val s=read(c);write(c,s.copy(reservations=s.reservations.filter{it.id!=r.id}+Rules.mergeSaved(r,s.reservations.find{it.id==r.id},rearm)));TimeScheduler.reconcile(c) }
  @Synchronized fun delete(c:Context,id:String){val s=read(c);write(c,s.copy(reservations=s.reservations.filter{it.id!=id}));TimeScheduler.reconcile(c)}
  @Synchronized fun enable(c:Context,on:Boolean){write(c,read(c).copy(enabled=on));TimeScheduler.reconcile(c)}
  @Synchronized fun complete(c:Context,id:String,condition:String,date:String){val s=read(c);val r=s.reservations.find{it.id==id}?:return

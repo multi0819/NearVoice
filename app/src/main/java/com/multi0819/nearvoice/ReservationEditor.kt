@@ -35,6 +35,6 @@ fun MainActivity.openEditor(original:Reservation?){val base=original?:Reservatio
  c.addView(Ui.space(this));val controls=Ui.row(this);Ui.weighted(controls,Ui.button(this,"미리 듣기"){val r=draft();if(r.message.isBlank())toast("메시지를 입력하세요.")else PlaybackService.test(this,r)})
  Ui.weighted(controls,Ui.button(this,"예약 저장"){val r=draft();val error=Rules.validate(r);if(error!=null){toast(error);return@button}
   if(!Rules.timeScheduleValid(r,ZonedDateTime.now(),original==null)){toast("앞으로 실행할 날짜와 시간을 선택하세요.");return@button}
-  change{Store.upsert(this,r);if(Store.read(this).enabled&&r.trigger!="TIME"&&LocationService.permitted(this))LocationService.start(this);dashboard();toast("예약을 저장했습니다.")}
+  change{Store.upsert(this,r,rearm=true);if(Store.read(this).enabled&&r.trigger!="TIME"&&LocationService.permitted(this))LocationService.start(this);dashboard();toast("예약을 저장했습니다. 실행 기록이 초기화되었습니다.")}
  });c.addView(controls)
 }
