@@ -17,8 +17,7 @@ object Notices {
   if(channel=="monitor")builder.addAction(Notification.Action.Builder(android.R.drawable.ic_media_pause,"전체 알림 끄기",PendingIntent.getBroadcast(c,999,Intent(c,StopReceiver::class.java),PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)).build())
   return builder.build()
  }
- fun watchAlert(c:Context,r:Reservation){getSystemService(c).notify(r.id.hashCode(),build(c,"watch_alerts_v1",r.title,r.message))}
- private fun getSystemService(c:Context)=c.getSystemService(NotificationManager::class.java)
+ fun watchAlert(c:Context,r:Reservation){try{c.getSystemService(NotificationManager::class.java).notify(r.id.hashCode(),build(c,"watch_alerts_v1",r.title,r.message))}catch(_:SecurityException){Store.error(c,"워치 전달을 위해 휴대폰 알림 권한을 허용하세요.")}}
  fun alert(c:Context,title:String,message:String,id:Int=303){try{c.getSystemService(NotificationManager::class.java).notify(id,build(c,"alerts",title,message))}catch(_:SecurityException){}}
 }
 
