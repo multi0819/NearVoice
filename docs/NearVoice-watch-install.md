@@ -40,3 +40,7 @@ NearVoice-phone.apk를 내려받아 기존 앱 위에 설치합니다. 기존 �
     adb -s 워치IP:연결포트 install -r NearVoice-watch.apk
 
 첫 명령을 실행하면 워치에 표시된 페어링 코드를 입력합니다. 자세한 공식 문서: https://developer.android.com/training/wearables/get-started/debug-wifi
+
+## 워치 v1.0.5 업데이트
+
+휴대폰 v1.0.4는 그대로 사용하고 워치만 v1.0.5 APK로 덮어 설치합니다. 예약 알림을 높은 중요도의 새 채널로 표시합니다. 기존 채널의 중요도는 앱이 변경할 수 없으므로 채널을 새로 만들며, 기존 채널은 삭제하지 않습니다. 음성과 진동은 기존 예약 설정을 따릅니다. Galaxy Wearable의 알림 수신 시 화면 켜기와 상세 내용 표시를 켜고 화면 OFF 상태에서 테스트하세요. 높은 중요도는 알림 표시 요청이며 화면 켜짐을 강제로 보장하지 않습니다.

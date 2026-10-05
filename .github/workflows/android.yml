@@ -36,9 +36,9 @@ jobs:
       - name: Publish install APK
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.0.4
-          name: NearVoice v1.0.4 (테스트용)
-          body: 워치 한국어 음성 수신 앱 추가. 휴대폰에는 NearVoice-phone.apk, 워치에는 NearVoice-watch.apk를 설치하세요. 실제 화면 OFF 수신은 워치에서 테스트가 필요합니다.
+          tag_name: v1.0.5
+          name: NearVoice v1.0.5 (테스트용)
+          body: 워치 예약 알림의 중요도를 높이고 새 알림 채널로 적용합니다. 워치만 NearVoice-watch.apk로 업데이트하세요. 휴대폰 v1.0.4와 호환됩니다. 실제 화면 켜짐과 메시지 표시는 워치 설정 및 기기 테스트로 확인해야 합니다.
           files: |
             NearVoice-phone.apk
             NearVoice-watch.apk
