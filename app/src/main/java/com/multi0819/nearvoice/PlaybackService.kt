@@ -48,7 +48,7 @@ class PlaybackService:Service(){
   if(condition!="TEST")Store.complete(this,snapshot.id,condition,date)
   val reservation=r?:snapshot
   if(Rules.notificationOnly(Store.prefs(this).getBoolean("watch_mode",false),getSystemService(PowerManager::class.java).isInteractive,condition=="TEST")){
-   Notices.watchAlert(this,reservation);finishCurrent();return
+   WatchBridge.send(this,reservation,key){sent->if(current==key){if(sent)Notices.alert(this,reservation.title,reservation.message,reservation.id.hashCode())else Notices.watchAlert(this,reservation);finishCurrent()}};return
   }
   getSystemService(NotificationManager::class.java).notify(202,Notices.build(this,"playback",reservation.title,reservation.message,true))
   Notices.alert(this,reservation.title,reservation.message,reservation.id.hashCode())

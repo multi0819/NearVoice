@@ -23,19 +23,26 @@ jobs:
       - name: Test, lint and build
         run: |
           chmod +x gradlew
-          ./gradlew testDebugUnitTest lintDebug assembleDebug --stacktrace
+          ./gradlew :app:testDebugUnitTest :wear:testDebugUnitTest :app:lintDebug :wear:lintDebug :app:assembleDebug :wear:assembleDebug --stacktrace
+          cp app/build/outputs/apk/debug/app-debug.apk NearVoice-phone.apk
+          cp wear/build/outputs/apk/debug/wear-debug.apk NearVoice-watch.apk
       - uses: actions/upload-artifact@v4
         with:
           name: NearVoice-install-APK
-          path: app/build/outputs/apk/debug/app-debug.apk
+          path: |
+            NearVoice-phone.apk
+            NearVoice-watch.apk
           if-no-files-found: error
       - name: Publish install APK
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.0.3
-          name: NearVoice v1.0.3 (테스트용)
-          body: 워치 모드 추가 — 화면 OFF 시 휴대폰 직접 음성·진동을 중지하고 일반 예약 알림 전달. 위치·시간 음성 예약 앱. 최초 설치 후 권한과 한국어 음성 테스트를 확인하세요. 개발용 서명 APK입니다.
-          files: app/build/outputs/apk/debug/app-debug.apk
+          tag_name: v1.0.4
+          name: NearVoice v1.0.4 (테스트용)
+          body: 워치 한국어 음성 수신 앱 추가. 휴대폰에는 NearVoice-phone.apk, 워치에는 NearVoice-watch.apk를 설치하세요. 실제 화면 OFF 수신은 워치에서 테스트가 필요합니다.
+          files: |
+            NearVoice-phone.apk
+            NearVoice-watch.apk
+            app/build/outputs/apk/debug/app-debug.apk
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -43,4 +50,4 @@ jobs:
           path: |
             app/build/reports/tests/
             app/build/reports/lint-results-debug.html
-
+            wear/build/reports/
