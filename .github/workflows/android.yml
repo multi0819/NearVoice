@@ -36,9 +36,9 @@ jobs:
       - name: Publish install APK
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.0.8
-          name: NearVoice v1.0.8 (테스트용)
-          body: 구글 지도에서 찾기 및 공유 받기로 목적지 등록을 추가합니다. 휴대폰만 업데이트하세요. 워치는 v1.0.6 유지. 좌표가 없는 링크는 지도에서 직접 확인해야 합니다.
+          tag_name: v1.0.9
+          name: NearVoice v1.0.9 (테스트용)
+          body: 다른 장소 선택에서 구글 지도를 바로 엽니다. 주소가 포함된 장소 ID 공유 링크도 주소 검색 결과로 확인하도록 지원합니다. 휴대폰만 업데이트하세요.
           files: |
             NearVoice-phone.apk
             NearVoice-watch.apk

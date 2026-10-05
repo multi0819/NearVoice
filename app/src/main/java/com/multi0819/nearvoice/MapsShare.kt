@@ -12,6 +12,16 @@ object MapsShare {
   else->false
  }}.getOrDefault(false)
  fun label(text:String):String=text.lineSequence().map{it.trim()}.firstOrNull{it.isNotEmpty()&&!it.contains("https://") }?.take(200)?:"구글 지도 장소"
+ fun searchQuery(url:String):String? {
+  if(!allowed(url))return null
+  val u=runCatching{URI(url)}.getOrNull()?:return null
+  if(u.path.startsWith("/maps/dir"))return null
+  val raw=Regex("/maps/place/([^/]+)").find(u.rawPath.orEmpty())?.groupValues?.get(1)
+   ?:u.rawQuery.orEmpty().split('&').firstOrNull{it.startsWith("query=")||it.startsWith("q=")}?.substringAfter('=')?:return null
+  val name=runCatching{URLDecoder.decode(raw,"UTF-8")}.getOrNull()?.take(500)?:return null
+  if(name.isBlank()||name.startsWith("cid:")||name.startsWith("0x"))return null
+  return Regex("^(.+?(?:로|길)\\s*\\d+(?:-\\d+)?)\\b").find(name)?.groupValues?.get(1)?:name
+ }
  fun parse(text:String):Place? {
   val link=url(text)?:return null;val u=runCatching{URI(link)}.getOrNull()?:return null
   if(u.path.startsWith("/maps/dir"))return null

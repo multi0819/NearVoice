@@ -15,7 +15,7 @@ fun MainActivity.openEditor(original:Reservation?,initialPlace:Place?=null){subp
  val state=Store.read(this)
  Ui.weighted(places,Ui.button(this,"집"){state.home?.let{selected(it)}?:run{toast("설정에서 집 주소를 등록하세요.")}})
  Ui.weighted(places,Ui.button(this,"회사"){state.work?.let{selected(it)}?:run{toast("설정에서 회사 주소를 등록하세요.")}})
- Ui.weighted(places,Ui.button(this,"지도"){pickPlace(place){selected(it)}});placeBox.addView(places)
+ Ui.weighted(places,Ui.button(this,"다른 장소 선택"){pickPlace(null,true){selected(it)}});placeBox.addView(places)
  placeBox.addView(Ui.label(this,"알림 반경 (m)",14f));val radius=Ui.edit(this,"100~50000",base.radius.toInt().toString());radius.inputType=InputType.TYPE_CLASS_NUMBER;placeBox.addView(radius)
  val presets=Ui.row(this);listOf(100,300,500,1000).forEach{n->Ui.weighted(presets,Ui.button(this,"${n}m"){radius.setText(n.toString())})};placeBox.addView(presets);c.addView(placeBox)
  trigger.onItemSelectedListener=object:AdapterView.OnItemSelectedListener{override fun onNothingSelected(p:AdapterView<*>?){};override fun onItemSelected(p:AdapterView<*>?,v:View?,pos:Int,id:Long){placeBox.visibility=if(pos==0)View.GONE else View.VISIBLE}}

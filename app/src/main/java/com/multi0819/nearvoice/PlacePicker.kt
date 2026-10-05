@@ -23,7 +23,7 @@ class PlacePicker:Activity(){
     if(last!=null){select(Place("현재 위치",last.latitude,last.longitude));center(last.latitude,last.longitude)}else info.text="현재 위치가 없습니다. 주소 검색이나 지도 선택을 사용하세요."
    }else info.text="위치 권한을 먼저 허용하세요. 주소 검색과 지도 선택은 바로 가능합니다."
   });c.addView(searchRow)
-  c.addView(Ui.button(this,"구글 지도에서 찾기"){val query=name.text.toString().trim();val url=if(query.isEmpty())"https://www.google.com/maps"else "https://www.google.com/maps/search/?api=1&query=${Uri.encode(query)}";val i=Intent(Intent.ACTION_VIEW,Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK).setPackage("com.google.android.apps.maps");try{startActivity(i)}catch(_:ActivityNotFoundException){try{startActivity(i.setPackage(null))}catch(_:ActivityNotFoundException){Toast.makeText(this,"구글 지도 앱이나 브라우저를 설치하세요.",Toast.LENGTH_LONG).show()}}})
+  c.addView(Ui.button(this,"구글 지도에서 찾기"){openGoogleMaps()})
   c.addView(Ui.label(this,"구글 지도에서 장소 검색 → 공유 → NearVoice를 선택하세요.",13f,Ui.muted))
   info=Ui.label(this,initial?.let{"%.5f, %.5f".format(it.latitude,it.longitude)}?:"주소를 검색하거나 지도를 눌러 지점을 선택하세요.",14f,Ui.accent);c.addView(info)
   web=WebView(this);web.settings.javaScriptEnabled=true;web.settings.allowFileAccess=false;web.settings.allowContentAccess=false;web.settings.cacheMode=WebSettings.LOAD_DEFAULT
@@ -56,8 +56,10 @@ class PlacePicker:Activity(){
    ${if(initial!=null)"pin($lat,$lon);"else ""}
    </script></body></html>"""
   web.loadDataWithBaseURL("https://nearvoice.local/map.html",html,"text/html","UTF-8",null)
-  intent.getStringExtra("shared_map")?.let{shared->selected=null;name.setText(MapsShare.label(shared).takeIf{it!="구글 지도 장소"}?:"");info.text="공유한 장소 확인 중…";executor.execute{val p=runCatching{MapsLinkResolver.resolve(shared)}.getOrNull();runOnUiThread{if(isDestroyed)return@runOnUiThread;if(p==null){info.text="이 공유 링크에는 장소 좌표가 없습니다. 주소 검색이나 지도에서 위치를 선택해주세요."}else{select(p);name.setText(p.label);center(p.latitude,p.longitude)}}}}
+  intent.getStringExtra("shared_map")?.let{shared->selected=null;name.setText(MapsShare.label(shared).takeIf{it!="구글 지도 장소"}?:"");info.text="공유한 장소 확인 중…";executor.execute{val result=runCatching{MapsLinkResolver.resolve(shared)}.getOrNull();runOnUiThread{if(isDestroyed)return@runOnUiThread;val p=result?.place;if(p!=null){select(p);name.setText(p.label);center(p.latitude,p.longitude)}else if(!result?.query.isNullOrBlank()){name.setText(result!!.query);info.text="공유한 주소의 위치를 검색합니다. 결과를 확인해 선택하세요.";search(result.query!!)}else{info.text="공유한 장소를 확인하지 못했습니다. 주소 검색이나 지도 선택을 사용하세요."}}}}
+  if(b==null&&intent.getBooleanExtra("open_google",false))openGoogleMaps()
  }
+ private fun openGoogleMaps(){val query=name.text.toString().trim();val url=if(query.isEmpty())"https://www.google.com/maps"else "https://www.google.com/maps/search/?api=1&query=${Uri.encode(query)}";val i=Intent(Intent.ACTION_VIEW,Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK).setPackage("com.google.android.apps.maps");try{startActivity(i)}catch(_:ActivityNotFoundException){try{startActivity(i.setPackage(null))}catch(_:ActivityNotFoundException){Toast.makeText(this,"구글 지도 앱이나 브라우저를 설치하세요.",Toast.LENGTH_LONG).show()}}}
  private fun select(p:Place){selected=p;info.text="선택됨 · %.5f, %.5f".format(p.latitude,p.longitude);if(name.text.isBlank())name.setText(p.label)}
  private fun center(lat:Double,lon:Double){if(!mapReady)return;web.evaluateJavascript("center($lat,$lon)",null)}
  private fun search(query:String){if(query.isBlank()){info.text="주소나 장소 이름을 입력하세요.";return};info.text="주소 검색 중…"

@@ -69,7 +69,7 @@ class MainActivity:Activity(){
   c.addView(Ui.label(this,"화면이 꺼져 있어도 위치 감지 중 알림이 표시됩니다. 강제 종료 후에는 앱을 다시 여세요. 재부팅 후 위치 감지는 다시 켜주세요. 무음·방해금지 및 알림 볼륨은 휴대폰 설정을 따릅니다.",13f,Ui.muted))
   c.addView(Ui.label(this,"지도와 주소 검색 시 네트워크를 사용합니다. 메시지와 예약은 이 기기에 저장됩니다. 지도: © OpenStreetMap contributors / Leaflet.",12f,Ui.muted))
  }
- fun pickPlace(initial:Place?,callback:(Place)->Unit){placeCallback=callback;startActivityForResult(Intent(this,PlacePicker::class.java).putExtra("place",Codec.place(initial)?.toString()),10)}
+ fun pickPlace(initial:Place?,openGoogle:Boolean=false,callback:(Place)->Unit){placeCallback=callback;startActivityForResult(Intent(this,PlacePicker::class.java).putExtra("place",Codec.place(initial)?.toString()).putExtra("open_google",openGoogle),10)}
  @Deprecated("Legacy result API") override fun onActivityResult(requestCode:Int,resultCode:Int,data:Intent?){super.onActivityResult(requestCode,resultCode,data)
   if(resultCode!=RESULT_OK)return
   if(requestCode==10){runCatching{Codec.place(org.json.JSONObject(data?.getStringExtra("place")?:""))}.getOrNull()?.let{val callback=placeCallback;placeCallback=null;callback?.invoke(it)}}
