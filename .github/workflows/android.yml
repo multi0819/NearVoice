@@ -36,9 +36,9 @@ jobs:
       - name: Publish install APK
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.0.5
-          name: NearVoice v1.0.5 (테스트용)
-          body: 워치 예약 알림의 중요도를 높이고 새 알림 채널로 적용합니다. 워치만 NearVoice-watch.apk로 업데이트하세요. 휴대폰 v1.0.4와 호환됩니다. 실제 화면 켜짐과 메시지 표시는 워치 설정 및 기기 테스트로 확인해야 합니다.
+          tag_name: v1.0.6
+          name: NearVoice v1.0.6 (테스트용)
+          body: 워치 예약 알림 자체의 진동을 예약 설정에 따라 켜고 중복 알림을 제거합니다. 워치만 NearVoice-watch.apk로 업데이트하세요. 휴대폰 v1.0.4와 호환됩니다. 실제 화면 켜짐과 메시지 표시는 워치 설정 및 기기 테스트로 확인해야 합니다.
           files: |
             NearVoice-phone.apk
             NearVoice-watch.apk

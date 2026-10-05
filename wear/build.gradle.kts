@@ -2,7 +2,7 @@ plugins { id("com.android.application"); id("org.jetbrains.kotlin.android") }
 android {
  namespace = "com.multi0819.nearvoice.wear"
  compileSdk = 35
- defaultConfig { applicationId = "com.multi0819.nearvoice"; minSdk = 30; targetSdk = 35; versionCode = 6; versionName = "1.0.5" }
+ defaultConfig { applicationId = "com.multi0819.nearvoice"; minSdk = 30; targetSdk = 35; versionCode = 7; versionName = "1.0.6" }
  signingConfigs { getByName("debug") { storeFile = rootProject.file("signing/nearvoice-debug.jks"); storePassword = "android"; keyAlias = "androiddebugkey"; keyPassword = "android" } }
  compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }
  kotlinOptions { jvmTarget = "17" }
