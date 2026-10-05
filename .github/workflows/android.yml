@@ -34,7 +34,7 @@ jobs:
         with:
           tag_name: v1.0.3
           name: NearVoice v1.0.3 (테스트용)
-          body: 워치 모드 추가: 화면 OFF 시 휴대폰 직접 음성·진동을 중지하고 일반 예약 알림 전달. 위치·시간 음성 예약 앱. 최초 설치 후 권한과 한국어 음성 테스트를 확인하세요. 개발용 서명 APK입니다.
+          body: 워치 모드 추가 — 화면 OFF 시 휴대폰 직접 음성·진동을 중지하고 일반 예약 알림 전달. 위치·시간 음성 예약 앱. 최초 설치 후 권한과 한국어 음성 테스트를 확인하세요. 개발용 서명 APK입니다.
           files: app/build/outputs/apk/debug/app-debug.apk
       - uses: actions/upload-artifact@v4
         if: always()
@@ -43,3 +43,4 @@ jobs:
           path: |
             app/build/reports/tests/
             app/build/reports/lint-results-debug.html
+
