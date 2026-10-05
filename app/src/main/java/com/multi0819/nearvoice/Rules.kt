@@ -18,7 +18,7 @@ object Rules {
   if(wasInside)return Entry(distance<=radius+maxOf(50.0,radius*0.2),false)
   return Entry(distance<=radius,distance<=radius)
  }
- fun eventKey(id:String,condition:String,date:String)="$id|$condition|$date"
+ fun eventKey(id:String,condition:String,date:String,revision:Long=0)="$id|$condition|$date|$revision"
  fun toggleDate(selected:Set<String>,date:String,today:LocalDate):Set<String> {
   if(date in selected)return selected-date
   if(runCatching{LocalDate.parse(date).isBefore(today)}.getOrDefault(true))return selected

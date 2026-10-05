@@ -36,7 +36,7 @@ class PlaybackService:Service(){
  override fun onStartCommand(i:Intent?,flags:Int,startId:Int):Int {
   if(i==null){stopSelf();return START_NOT_STICKY}
   val r=runCatching{Codec.reservation(JSONObject(i.getStringExtra("reservation")?:""))}.getOrNull()?:run{stopSelf();return START_NOT_STICKY}
-  val condition=i.getStringExtra("condition")?:"TEST";val date=i.getStringExtra("date")?:"";val key=Rules.eventKey(r.id,condition,date)
+  val condition=i.getStringExtra("condition")?:"TEST";val date=i.getStringExtra("date")?:"";val key=Rules.eventKey(r.id,condition,date,r.revision)
   if(queue.add(key))events[key]=Triple(r,condition,date)
   next();return START_NOT_STICKY
  }

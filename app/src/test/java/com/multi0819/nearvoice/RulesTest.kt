@@ -111,4 +111,12 @@ class RulesTest {
   val saved=Rules.mergeSaved(stale.copy(enabled=false,revision=2),current)
   assertEquals(current.completed,saved.completed)
  }
+ @Test fun rebookedLocationCanQueueWhileOldRevisionIsPlaying() {
+  val q=EventQueue()
+  val old=Rules.eventKey("a","LOCATION","2026-10-05",1)
+  val revised=Rules.eventKey("a","LOCATION","2026-10-05",2)
+  assertTrue(q.add(old));assertEquals(old,q.poll())
+  assertTrue(q.add(revised));assertFalse(q.add(revised))
+  q.done(old);assertEquals(revised,q.poll())
+ }
 }

@@ -33,7 +33,7 @@ JDK17, SDK35, Gradle8.11.1, AGP8.9.1, Kotlin2.1.0:
 ```
 
 ## 제한과 검증 상태
-- 로컬 규칙 단위 테스트 17개 및 전체 Kotlin SDK 컴파일을 확인했습니다.
+- 로컬 규칙 단위 테스트 18개 및 전체 Kotlin SDK 컴파일을 확인했습니다.
 - GitHub Actions에서 testDebugUnitTest·lintDebug·assembleDebug가 성공했습니다. 릴리스 APK는 이 검사를 통과한 GitHub 빌드 결과입니다. 최초 로컬 APK도 SDK aapt2·d8·apksigner와 Kotlin 컴파일러로 별도 생성해 서명을 검증했습니다.
 - 실제 휴대폰 UI, 화면 OFF 음성·진동, 실제 위치 이동, 절전·재부팅은 아직 검증하지 않았습니다. 첫 설치 후 음성 테스트와 짧은 시간 예약으로 확인하세요.
 - 위치 업데이트는 약 15초/10m 요청이며 실제 간격·정확도는 기기·GPS·절전 상태에 따라 달라집니다. 100m 이상 반경을 권장합니다.
