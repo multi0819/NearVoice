@@ -22,4 +22,22 @@ class MapsShareTest {
   assertNull(GooglePlaceInfo.parse("""["0x1:0x7b","Office",[91,127],"123"]""","123"))
   assertNull(GooglePlaceInfo.cid("https://evil.test/maps?cid=123"))
  }
+ @Test fun intersectionRecordDoesNotRequireRepeatedDecimalCid(){
+  val url="https://www.google.com/maps/place/Intersection/data=!4m2!3m1!1s0x357b50f22e37d939:0x2b150b48f6526187!18m1!1e1"
+  val cid=GooglePlaceInfo.cid(url)!!;assertEquals("3104399926139969927",cid)
+  val html="""initEmbed([[[3174,127.1520718,37.2792952]],[["0x357b50f22e37d939:0x2b150b48f6526187","Yongin-si, 동백이마트사거리",[37.2792952,127.1520718]],"동백이마트사거리",["Yongin-si"]]])"""
+  val p=GooglePlaceInfo.parse(html,cid)!!
+  assertEquals(37.2792952,p.latitude,0.0000001);assertEquals(127.1520718,p.longitude,0.0000001)
+  assertNull(GooglePlaceInfo.parse(html,"14904217187204941361"))
+ }
+ @Test fun conflictingDecimalCidIsRejected(){
+  val html="""["0x357b50f22e37d939:0x2b150b48f6526187","Intersection",[37.2792952,127.1520718],"123"]"""
+  assertNull(GooglePlaceInfo.parse(html,"3104399926139969927"))
+ }
+ @Test fun emartDongbaekBusinessRecordIsAccepted(){
+  val url="https://www.google.com/maps/place/Emart/data=!1s0x357b50f3c1ee829d:0xce16e47584ba475f!18m1!1e1"
+  val cid=GooglePlaceInfo.cid(url)!!;assertEquals("14850308014689896287",cid)
+  val html="""[["0x357b50f3c1ee829d:0xce16e47584ba475f","이마트 동백점",[37.2779159,127.151605],"14850308014689896287"],"이마트 동백점"]"""
+  val p=GooglePlaceInfo.parse(html,cid)!!;assertEquals(37.2779159,p.latitude,0.0000001);assertEquals(127.151605,p.longitude,0.0000001)
+ }
 }

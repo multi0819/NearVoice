@@ -15,9 +15,10 @@ object GooglePlaceInfo {
  fun parse(html:String,cid:String):Place? {
   if(!cid.matches(Regex("\\d{1,20}")))return null
   val number="(-?\\d+(?:\\.\\d+)?)"
-  val record=Regex("\\[\\s*\"0x[0-9a-fA-F]+:0x([0-9a-fA-F]+)\"\\s*,\\s*\"((?:[^\"\\\\]|\\\\.)*)\"\\s*,\\s*\\[\\s*$number\\s*,\\s*$number\\s*]\\s*,\\s*\"${Regex.escape(cid)}\"")
+  val record=Regex("\\[\\s*\"0x[0-9a-fA-F]+:0x([0-9a-fA-F]+)\"\\s*,\\s*\"((?:[^\"\\\\]|\\\\.)*)\"\\s*,\\s*\\[\\s*$number\\s*,\\s*$number\\s*](?:\\s*,\\s*\"(\\d{1,20})\")?\\s*]")
   for(m in record.findAll(html)){
    if(runCatching{BigInteger(m.groupValues[1],16).toString()}.getOrNull()!=cid)continue
+   if(m.groupValues[5].isNotEmpty()&&m.groupValues[5]!=cid)continue
    val lat=m.groupValues[3].toDoubleOrNull()?:continue;val lon=m.groupValues[4].toDoubleOrNull()?:continue
    if(!lat.isFinite()||!lon.isFinite()||lat !in -90.0..90.0||lon !in -180.0..180.0)continue
    val label=m.groupValues[2].replace(Regex("\\\\u([0-9a-fA-F]{4})")){it.groupValues[1].toInt(16).toChar().toString()}.replace("\\\"","\"").replace("\\/","/").replace("\\\\","\\").take(500)
