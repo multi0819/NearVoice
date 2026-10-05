@@ -13,12 +13,20 @@ class MainActivity:Activity(){
  var subpage=false
  var placeCallback:((Place)->Unit)?=null;var soundCallback:((String?)->Unit)?=null
  private val update=object:Runnable{override fun run(){updateStatus();handler.postDelayed(this,2500)}}
- override fun onCreate(b:Bundle?){super.onCreate(b);Notices.channels(this);dashboard();if(Build.VERSION.SDK_INT>=33)onBackInvokedDispatcher.registerOnBackInvokedCallback(android.window.OnBackInvokedDispatcher.PRIORITY_DEFAULT){navigateBack()}}
+ override fun onCreate(b:Bundle?){super.onCreate(b);Notices.channels(this);dashboard();receiveMap(intent);if(Build.VERSION.SDK_INT>=33)onBackInvokedDispatcher.registerOnBackInvokedCallback(android.window.OnBackInvokedDispatcher.PRIORITY_DEFAULT){navigateBack()}}
+ override fun onNewIntent(i:Intent){super.onNewIntent(i);setIntent(i);receiveMap(i)}
+ private fun receiveMap(i:Intent){if(i.action!=Intent.ACTION_SEND||i.type!="text/plain")return
+  val shared=i.getStringExtra(Intent.EXTRA_TEXT)?.take(12000)?:return
+  if(MapsShare.url(shared)==null){toast("구글 지도 장소의 공유 링크를 선택하세요.");return}
+  if(placeCallback==null)placeCallback={p->openEditor(Reservation(trigger="LOCATION",place=p))}
+  startActivityForResult(Intent(this,PlacePicker::class.java).putExtra("shared_map",shared),10)
+  i.action=null
+ }
  override fun onResume(){super.onResume();TimeScheduler.reconcile(this);handler.post(update);updateStatus()}
  override fun onPause(){handler.removeCallbacks(update);super.onPause()}
  fun toast(s:String){Toast.makeText(this,s,Toast.LENGTH_LONG).show()}
  fun change(action:()->Unit){try{action()}catch(e:Exception){toast(e.message?:"저장에 실패했습니다.")}}
- fun dashboard(){subpage=false;statusView=null;nextView=null;val c=Ui.page(this,"NearVoice");c.addView(Ui.label(this,"PROXIMITY / SCHEDULE",12f,Ui.muted))
+ fun dashboard(){placeCallback=null;subpage=false;statusView=null;nextView=null;val c=Ui.page(this,"NearVoice");c.addView(Ui.label(this,"PROXIMITY / SCHEDULE",12f,Ui.muted))
   val state=Store.read(this);val toggle=Ui.toggle(this,"전체 알림 ON / OFF",state.enabled);c.addView(toggle)
   toggle.setOnCheckedChangeListener{_,on->change{if(on){if(!checkPermissions()){toggle.isChecked=false;return@change};Store.enable(this,true);if(Store.read(this).reservations.any{it.enabled&&it.trigger!="TIME"})LocationService.start(this)}else{Store.enable(this,false);LocationService.stop(this);stopService(Intent(this,PlaybackService::class.java))};updateStatus()}}
   statusView=Ui.label(this,"",14f,Ui.accent);c.addView(statusView);nextView=Ui.label(this,"",14f,Ui.muted);c.addView(nextView);warningsView=Ui.label(this,"",13f,android.graphics.Color.rgb(255,184,107));c.addView(warningsView)
@@ -64,7 +72,7 @@ class MainActivity:Activity(){
  fun pickPlace(initial:Place?,callback:(Place)->Unit){placeCallback=callback;startActivityForResult(Intent(this,PlacePicker::class.java).putExtra("place",Codec.place(initial)?.toString()),10)}
  @Deprecated("Legacy result API") override fun onActivityResult(requestCode:Int,resultCode:Int,data:Intent?){super.onActivityResult(requestCode,resultCode,data)
   if(resultCode!=RESULT_OK)return
-  if(requestCode==10){runCatching{Codec.place(org.json.JSONObject(data?.getStringExtra("place")?:""))}.getOrNull()?.let{placeCallback?.invoke(it)}}
+  if(requestCode==10){runCatching{Codec.place(org.json.JSONObject(data?.getStringExtra("place")?:""))}.getOrNull()?.let{val callback=placeCallback;placeCallback=null;callback?.invoke(it)}}
   if(requestCode==11){val uri=if(Build.VERSION.SDK_INT>=33)data?.getParcelableExtra(android.media.RingtoneManager.EXTRA_RINGTONE_PICKED_URI,Uri::class.java)else @Suppress("DEPRECATION") data?.getParcelableExtra<Uri>(android.media.RingtoneManager.EXTRA_RINGTONE_PICKED_URI);soundCallback?.invoke(uri?.toString())}
  }
  private fun navigateBack(){if(subpage)dashboard()else finish()}

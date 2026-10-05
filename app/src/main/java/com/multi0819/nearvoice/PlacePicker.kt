@@ -13,7 +13,7 @@ import org.json.JSONObject
 @android.annotation.SuppressLint("MissingPermission")
 class PlacePicker:Activity(){
  private lateinit var web:WebView;private lateinit var info:TextView;private lateinit var name:EditText
- private var selected:Place?=null;private val executor=Executors.newSingleThreadExecutor()
+ private var mapReady=false;private var selected:Place?=null;private val executor=Executors.newSingleThreadExecutor()
  override fun onCreate(b:Bundle?){super.onCreate(b);val c=Ui.page(this,"목적지 선택")
   val initial=runCatching{Codec.place(JSONObject(intent.getStringExtra("place")?:""))}.getOrNull();selected=initial
   name=Ui.edit(this,"저장할 장소 이름 / 주소",initial?.label?:"");c.addView(name)
@@ -23,6 +23,8 @@ class PlacePicker:Activity(){
     if(last!=null){select(Place("현재 위치",last.latitude,last.longitude));center(last.latitude,last.longitude)}else info.text="현재 위치가 없습니다. 주소 검색이나 지도 선택을 사용하세요."
    }else info.text="위치 권한을 먼저 허용하세요. 주소 검색과 지도 선택은 바로 가능합니다."
   });c.addView(searchRow)
+  c.addView(Ui.button(this,"구글 지도에서 찾기"){val query=name.text.toString().trim();val url=if(query.isEmpty())"https://www.google.com/maps"else "https://www.google.com/maps/search/?api=1&query=${Uri.encode(query)}";val i=Intent(Intent.ACTION_VIEW,Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK).setPackage("com.google.android.apps.maps");try{startActivity(i)}catch(_:ActivityNotFoundException){try{startActivity(i.setPackage(null))}catch(_:ActivityNotFoundException){Toast.makeText(this,"구글 지도 앱이나 브라우저를 설치하세요.",Toast.LENGTH_LONG).show()}}})
+  c.addView(Ui.label(this,"구글 지도에서 장소 검색 → 공유 → NearVoice를 선택하세요.",13f,Ui.muted))
   info=Ui.label(this,initial?.let{"%.5f, %.5f".format(it.latitude,it.longitude)}?:"주소를 검색하거나 지도를 눌러 지점을 선택하세요.",14f,Ui.accent);c.addView(info)
   web=WebView(this);web.settings.javaScriptEnabled=true;web.settings.allowFileAccess=false;web.settings.allowContentAccess=false;web.settings.cacheMode=WebSettings.LOAD_DEFAULT
   web.settings.userAgentString="NearVoice/1.0 (+https://github.com/multi0819/NearVoice) ${web.settings.userAgentString}"
@@ -34,6 +36,7 @@ class PlacePicker:Activity(){
    }else if(u.scheme=="nearvoice"&&u.host=="error"){info.text="지도 연결을 확인하세요. 주소 검색은 별도로 사용할 수 있습니다."}
    return true
   }
+  override fun onPageFinished(v:WebView,url:String){mapReady=true;selected?.let{center(it.latitude,it.longitude)}}
   override fun onReceivedError(v:WebView,request:WebResourceRequest,error:WebResourceError){if(request.isForMainFrame)info.text="지도를 불러오지 못했습니다. 인터넷 연결을 확인하세요."}
   }
   c.addView(web,LinearLayout.LayoutParams(-1,Ui.dp(this,380)))
@@ -53,9 +56,10 @@ class PlacePicker:Activity(){
    ${if(initial!=null)"pin($lat,$lon);"else ""}
    </script></body></html>"""
   web.loadDataWithBaseURL("https://nearvoice.local/map.html",html,"text/html","UTF-8",null)
+  intent.getStringExtra("shared_map")?.let{shared->selected=null;name.setText(MapsShare.label(shared).takeIf{it!="구글 지도 장소"}?:"");info.text="공유한 장소 확인 중…";executor.execute{val p=runCatching{MapsLinkResolver.resolve(shared)}.getOrNull();runOnUiThread{if(isDestroyed)return@runOnUiThread;if(p==null){info.text="이 공유 링크에는 장소 좌표가 없습니다. 주소 검색이나 지도에서 위치를 선택해주세요."}else{select(p);name.setText(p.label);center(p.latitude,p.longitude)}}}}
  }
  private fun select(p:Place){selected=p;info.text="선택됨 · %.5f, %.5f".format(p.latitude,p.longitude);if(name.text.isBlank())name.setText(p.label)}
- private fun center(lat:Double,lon:Double){web.evaluateJavascript("center($lat,$lon)",null)}
+ private fun center(lat:Double,lon:Double){if(!mapReady)return;web.evaluateJavascript("center($lat,$lon)",null)}
  private fun search(query:String){if(query.isBlank()){info.text="주소나 장소 이름을 입력하세요.";return};info.text="주소 검색 중…"
   executor.execute{val results=runCatching{@Suppress("DEPRECATION") Geocoder(this,Locale.KOREAN).getFromLocationName(query,5)}
    runOnUiThread{if(isDestroyed)return@runOnUiThread;val list=results.getOrNull();if(list.isNullOrEmpty()){info.text="주소를 찾지 못했습니다. 상세 주소를 입력하거나 지도를 선택하세요.";return@runOnUiThread}
