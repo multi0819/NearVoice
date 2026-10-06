@@ -30,7 +30,7 @@ class MainActivity:Activity(){
  fun dashboard(){locationViews.clear();placeCallback=null;subpage=false;statusView=null;nextView=null;warningsView=null
   val c=Ui.page(this,"");val state=Store.read(this)
   val header=Ui.column(this).apply{background=Ui.shape(android.graphics.Color.rgb(20,38,56),android.graphics.Color.rgb(46,73,94))}
-  header.addView(Ui.label(this,"NearVoice",27f,Ui.accent).apply{typeface=android.graphics.Typeface.create("sans-serif-medium",0)})
+  header.addView(Ui.label(this,"NearVoice",27f,Ui.accent).apply{typeface=android.graphics.Typeface.create("sans-serif-medium",android.graphics.Typeface.NORMAL)})
   header.addView(Ui.label(this,"도착과 시간을 기억하는 음성 알림 · v${packageManager.getPackageInfo(packageName,0).versionName}",12f,Ui.muted))
   val toggle=Ui.toggle(this,"전체 알림",state.enabled);header.addView(toggle)
   toggle.setOnCheckedChangeListener{_,on->change{if(on){if(!checkPermissions()){toggle.isChecked=false;return@change};Store.enable(this,true);if(Store.read(this).reservations.any{it.enabled&&it.trigger!="TIME"})LocationService.start(this)}else{Store.enable(this,false);LocationService.stop(this);stopService(Intent(this,PlaybackService::class.java))};updateStatus()}}
