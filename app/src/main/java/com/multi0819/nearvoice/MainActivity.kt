@@ -27,36 +27,59 @@ class MainActivity:Activity(){
  override fun onPause(){handler.removeCallbacks(update);super.onPause()}
  fun toast(s:String){Toast.makeText(this,s,Toast.LENGTH_LONG).show()}
  fun change(action:()->Unit){try{action()}catch(e:Exception){toast(e.message?:"저장에 실패했습니다.")}}
- fun dashboard(){locationViews.clear();placeCallback=null;subpage=false;statusView=null;nextView=null;val c=Ui.page(this,"NearVoice");c.addView(Ui.label(this,"PROXIMITY / SCHEDULE · v${packageManager.getPackageInfo(packageName,0).versionName}",12f,Ui.muted))
-  val state=Store.read(this);val toggle=Ui.toggle(this,"전체 알림 ON / OFF",state.enabled);c.addView(toggle)
+ fun dashboard(){locationViews.clear();placeCallback=null;subpage=false;statusView=null;nextView=null;warningsView=null
+  val c=Ui.page(this,"");val state=Store.read(this)
+  val header=Ui.column(this).apply{background=Ui.shape(android.graphics.Color.rgb(20,38,56),android.graphics.Color.rgb(46,73,94))}
+  header.addView(Ui.label(this,"NearVoice",27f,Ui.accent).apply{typeface=android.graphics.Typeface.create("sans-serif-medium",0)})
+  header.addView(Ui.label(this,"도착과 시간을 기억하는 음성 알림 · v${packageManager.getPackageInfo(packageName,0).versionName}",12f,Ui.muted))
+  val toggle=Ui.toggle(this,"전체 알림",state.enabled);header.addView(toggle)
   toggle.setOnCheckedChangeListener{_,on->change{if(on){if(!checkPermissions()){toggle.isChecked=false;return@change};Store.enable(this,true);if(Store.read(this).reservations.any{it.enabled&&it.trigger!="TIME"})LocationService.start(this)}else{Store.enable(this,false);LocationService.stop(this);stopService(Intent(this,PlaybackService::class.java))};updateStatus()}}
-  statusView=Ui.label(this,"",14f,Ui.accent);c.addView(statusView);nextView=Ui.label(this,"",14f,Ui.muted);c.addView(nextView);warningsView=Ui.label(this,"",13f,android.graphics.Color.rgb(255,184,107));c.addView(warningsView)
-  val actions=Ui.row(this);Ui.weighted(actions,Ui.button(this,"+ 예약 추가"){openEditor(null)});Ui.weighted(actions,Ui.button(this,"설정 / 집·회사"){settings()});c.addView(actions)
+  val actions=Ui.row(this)
+  Ui.weighted(actions,Ui.coloredButton(this,"+ 예약 추가",android.graphics.Color.rgb(234,199,118),android.graphics.Color.rgb(26,34,45)){openEditor(null)})
+  Ui.weighted(actions,Ui.coloredButton(this,"설정",android.graphics.Color.rgb(46,78,113),android.graphics.Color.rgb(225,237,252)){settings()})
+  header.addView(actions);c.addView(header);c.addView(Ui.space(this,18))
+  warningsView=Ui.label(this,"",13f,android.graphics.Color.rgb(255,184,107));c.addView(warningsView)
   if(state.enabled&&!LocationService.running&&state.reservations.any{it.enabled&&it.trigger!="TIME"})c.addView(Ui.button(this,"위치 감지 다시 시작"){if(checkPermissions()){try{LocationService.start(this);updateStatus()}catch(e:RuntimeException){toast("위치 권한을 확인하세요.")}}})
-  c.addView(Ui.space(this));c.addView(Ui.label(this,"예약 목록 · ${state.reservations.size}개",18f))
+  c.addView(Ui.label(this,"예약 목록 · ${state.reservations.size}개",18f))
   if(state.reservations.isEmpty())c.addView(Ui.label(this,"목적지나 시간을 등록하면 메시지를 읽어드립니다.",15f,Ui.muted))
-  state.reservations.forEach{r->val card=Ui.column(this);card.background=Ui.shape();val on=Ui.toggle(this,r.title,r.enabled);card.addView(on)
-   on.setOnCheckedChangeListener{_,v->change{Store.upsert(this,r.copy(enabled=v,revision=System.currentTimeMillis()));if(Store.read(this).enabled&&v&&r.trigger!="TIME"&&checkPermissions())LocationService.start(this)}}
-   card.addView(Ui.label(this,r.message,17f));val mode=when(r.trigger){"TIME"->"시간";"LOCATION"->"위치";else->"위치 + 시간"}
-   val repeat=when(r.repeat){"DAILY"->"매일";"WEEKDAYS"->"요일 ${r.weekdays.sorted().joinToString(",")}";else->r.dates.sorted().joinToString(", ")}
-   card.addView(Ui.label(this,"$mode · $repeat${if(r.trigger=="LOCATION")""else" · ${r.time}"}\n${r.place?.label?:"시간 예약"}${if(r.place!=null)" · ${r.radius.toInt()}m" else ""}",13f,Ui.muted))
-   if(r.trigger!="TIME"){val detail=Ui.label(this,"위치 검사 대기",13f,Ui.accent);card.addView(detail);locationViews[r.id]=detail}
-   val completed=r.completed.size;if(completed>0)card.addView(Ui.label(this,"실행 기록 ${completed}건",12f,Ui.muted))
-   val buttons=Ui.row(this);Ui.weighted(buttons,Ui.button(this,"수정"){openEditor(r)});Ui.weighted(buttons,Ui.button(this,"테스트"){PlaybackService.test(this,r)})
-   Ui.weighted(buttons,Ui.button(this,"삭제"){AlertDialog.Builder(this).setTitle("예약 삭제").setMessage("${r.title} 예약을 삭제할까요?").setPositiveButton("삭제"){_,_->change{Store.delete(this,r.id);dashboard()}}.setNegativeButton("취소",null).show()});card.addView(buttons);c.addView(card);c.addView(Ui.space(this))
+  state.reservations.forEach{r->
+   val card=Ui.column(this).apply{background=Ui.shape();minimumHeight=Ui.dp(this@MainActivity,88)}
+   val row=Ui.row(this)
+   val message=Ui.label(this,r.message.ifBlank{r.title},17f).apply{setLineSpacing(Ui.dp(this@MainActivity,3).toFloat(),1f);setOnClickListener{showReservationDetails(r.id)};isFocusable=true;contentDescription="${r.message.ifBlank{r.title}} · 세부조건 보기"}
+   row.addView(message,LinearLayout.LayoutParams(0,LinearLayout.LayoutParams.WRAP_CONTENT,1f))
+   val on=Ui.toggle(this,"",r.enabled).apply{contentDescription="${r.message.ifBlank{r.title}} 알림 켜기 또는 끄기"}
+   row.addView(on);card.addView(row)
+   card.setOnClickListener{showReservationDetails(r.id)}
+   on.setOnCheckedChangeListener{_,v->change{val current=Store.read(this).reservations.find{it.id==r.id}?:return@change;Store.upsert(this,current.copy(enabled=v,revision=System.currentTimeMillis()));if(Store.read(this).enabled&&v&&current.trigger!="TIME"&&checkPermissions())LocationService.start(this)}}
+   c.addView(card);c.addView(Ui.space(this,12))
   };updateStatus()
  }
- private fun updateStatus(){val s=Store.read(this);val l=LocationService.latest
-  val p=Store.prefs(this)
-  s.reservations.forEach{r->locationViews[r.id]?.text=buildList{
-   add(if(p.getLong("location_check_revision_${r.id}",-1)==r.revision)p.getString("location_check_${r.id}","위치 검사 대기")?:"위치 검사 대기"else"이 예약 저장 후 위치 검사 대기")
-   if(p.getLong("delivery_revision_${r.id}",-1)==r.revision)p.getString("delivery_${r.id}",null)?.let{add(it)}
-  }.joinToString("\n")}
-
-  statusView?.text=if(!s.enabled)"● 전체 알림 OFF" else "● ${if(LocationService.running)LocationService.status else "위치 감지 대기 / 시간 예약 ON"}${if(l!=null)"\n%.5f, %.5f · %d초 전 수신".format(l.latitude,l.longitude,((SystemClock.elapsedRealtimeNanos()-l.elapsedRealtimeNanos)/1_000_000_000L).coerceAtLeast(0))else ""}"
-  warningsView?.text=Rules.healthWarnings(getSystemService(NotificationManager::class.java).areNotificationsEnabled(),getSystemService(android.media.AudioManager::class.java).getStreamVolume(android.media.AudioManager.STREAM_ALARM),Store.prefs(this).getString("error",null)).joinToString("\n")
-  val next=s.reservations.mapNotNull{r->Rules.nextTime(r,ZonedDateTime.now())?.let{r.title to it}}.minByOrNull{it.second.toInstant()}
-  nextView?.text=if(!s.enabled)"예약을 켜면 감지를 시작합니다."else if(!TimeScheduler.exactAllowed(this))"정확한 알람 권한 필요 · 설정에서 허용" else next?.let{"다음 시간 알림 · ${it.first}\n${it.second.toLocalDate()} ${it.second.toLocalTime()}"}?:"다음 시간 알림 없음"
+ private fun showReservationDetails(id:String){
+  val r=Store.read(this).reservations.find{it.id==id}?:return
+  val mode=when(r.trigger){"TIME"->"시간";"LOCATION"->"위치";else->"위치 + 시간"}
+  val days=listOf("월","화","수","목","금","토","일")
+  val repeat=when(r.repeat){"DAILY"->"매일";"WEEKDAYS"->r.weekdays.sorted().mapNotNull{days.getOrNull(it-1)}.joinToString(" · ");else->r.dates.sorted().joinToString(", ")}
+  val details=buildList{
+   add("알림 조건  ·  $mode");add("날짜 / 반복  ·  $repeat")
+   if(r.trigger!="LOCATION")add("시간  ·  ${r.time}")
+   if(r.trigger!="TIME")r.place?.let{add("목적지  ·  ${it.label}");add("알림 반경  ·  ${r.radius.toInt()}m")}
+   add("음성 읽기  ·  ${if(r.voice)"ON"else"OFF"}   /   진동  ·  ${if(r.vibration)"ON"else"OFF"}")
+   add("알림음  ·  ${if(r.soundUri==null)"없음"else"선택됨"}")
+  }.joinToString("\n\n")
+  val content=Ui.column(this);content.addView(Ui.label(this,details,14f,Ui.text))
+  val scroll=ScrollView(this).apply{addView(content);isFillViewport=false}
+  val dialog=AlertDialog.Builder(this).setTitle(r.message.ifBlank{r.title}).setView(scroll).setPositiveButton("닫기",null).create()
+  val actions=Ui.row(this)
+  Ui.weighted(actions,Ui.button(this,"수정"){dialog.dismiss();openEditor(r)})
+  Ui.weighted(actions,Ui.button(this,"테스트"){PlaybackService.test(this,r)})
+  Ui.weighted(actions,Ui.button(this,"삭제"){dialog.dismiss();AlertDialog.Builder(this).setTitle("예약 삭제").setMessage("${r.message.ifBlank{r.title}} 예약을 삭제할까요?").setPositiveButton("삭제"){_,_->change{Store.delete(this,r.id);dashboard()}}.setNegativeButton("취소",null).show()})
+  content.addView(Ui.space(this,12));content.addView(actions)
+  dialog.setOnShowListener{dialog.window?.setBackgroundDrawable(Ui.shape());dialog.window?.setLayout((resources.displayMetrics.widthPixels*.92).toInt(),LinearLayout.LayoutParams.WRAP_CONTENT);dialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(Ui.accent)}
+  dialog.show()
+ }
+ private fun updateStatus(){
+  val warning=Rules.healthWarnings(getSystemService(NotificationManager::class.java).areNotificationsEnabled(),getSystemService(android.media.AudioManager::class.java).getStreamVolume(android.media.AudioManager.STREAM_ALARM),Store.prefs(this).getString("error",null)).joinToString("\n")
+  warningsView?.apply{text=warning;visibility=if(warning.isBlank())android.view.View.GONE else android.view.View.VISIBLE}
  }
  fun checkPermissions(requireLocation:Boolean=Store.read(this).reservations.any{it.enabled&&it.trigger!="TIME"}):Boolean {val needed=mutableListOf<String>();if(requireLocation&&!LocationService.permitted(this))needed.add(Manifest.permission.ACCESS_FINE_LOCATION)
   if(Build.VERSION.SDK_INT>=33&&checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)!=PackageManager.PERMISSION_GRANTED)needed.add(Manifest.permission.POST_NOTIFICATIONS)

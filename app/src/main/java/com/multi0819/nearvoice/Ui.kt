@@ -14,6 +14,7 @@ object Ui {
  fun row(c:Context)=LinearLayout(c).apply{orientation=LinearLayout.HORIZONTAL;gravity=Gravity.CENTER_VERTICAL}
  fun label(c:Context,s:String,size:Float=15f,color:Int=text)=TextView(c).apply{setText(s);textSize=size;setTextColor(color);setPadding(0,dp(c,7),0,dp(c,7))}
  fun button(c:Context,s:String,action:()->Unit)=Button(c).apply{setText(s);isAllCaps=false;setTextColor(accent);textSize=14f;background=shape();minHeight=dp(c,46);setPadding(dp(c,10),dp(c,4),dp(c,10),dp(c,4));setOnClickListener{action()}}
+ fun coloredButton(c:Context,s:String,color:Int,foreground:Int,action:()->Unit)=button(c,s,action).apply{backgroundTintList=null;background=shape(color,color);setTextColor(foreground);typeface=Typeface.create("sans-serif-medium",Typeface.NORMAL)}
  fun edit(c:Context,hint:String,value:String="",multiline:Boolean=false)=EditText(c).apply{setHint(hint);setText(value);setTextColor(Ui.text);setHintTextColor(muted);textSize=16f;background=shape();setPadding(dp(c,12),dp(c,12),dp(c,12),dp(c,12));isSingleLine=!multiline;if(multiline){minLines=3;maxLines=8;gravity=Gravity.TOP}}
  fun space(c:Context,n:Int=10)=Space(c).apply{layoutParams=LinearLayout.LayoutParams(1,dp(c,n))}
  fun toggle(c:Context,s:String,on:Boolean)=Switch(c).apply{text=s;isChecked=on;setTextColor(Ui.text);setPadding(0,dp(c,9),0,dp(c,9))}
@@ -22,7 +23,7 @@ object Ui {
  fun page(a:Activity,title:String):LinearLayout {
   val outer=LinearLayout(a).apply{orientation=LinearLayout.VERTICAL;setBackgroundColor(bg)}
   outer.setOnApplyWindowInsetsListener{v,insets->if(android.os.Build.VERSION.SDK_INT>=30){val b=insets.getInsets(WindowInsets.Type.systemBars());v.setPadding(b.left,b.top,b.right,b.bottom)}else {@Suppress("DEPRECATION") v.setPadding(insets.systemWindowInsetLeft,insets.systemWindowInsetTop,insets.systemWindowInsetRight,insets.systemWindowInsetBottom)};insets}
-  val scroll=ScrollView(a);val content=column(a);content.addView(label(a,title,25f,accent).apply{typeface=Typeface.create("sans-serif-medium",Typeface.NORMAL)})
+  val scroll=ScrollView(a);val content=column(a);if(title.isNotBlank())content.addView(label(a,title,25f,accent).apply{typeface=Typeface.create("sans-serif-medium",Typeface.NORMAL)})
   scroll.addView(content);outer.addView(scroll,LinearLayout.LayoutParams(-1,-1));a.setContentView(outer);return content
  }
 }
