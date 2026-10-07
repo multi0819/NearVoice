@@ -21,7 +21,14 @@ class LocationService:Service(),LocationListener {
   fun stop(c:Context){c.stopService(Intent(c,LocationService::class.java))}
  }
  override fun onBind(i:Intent?)=null
- override fun onCreate(){super.onCreate();manager=getSystemService(LocationManager::class.java);if(Build.VERSION.SDK_INT>=33)registerReceiver(refreshReceiver,IntentFilter(ScanSettings.ACTION),Context.RECEIVER_NOT_EXPORTED)else @Suppress("DEPRECATION") registerReceiver(refreshReceiver,IntentFilter(ScanSettings.ACTION))}
+ override fun onCreate(){super.onCreate();manager=getSystemService(LocationManager::class.java);registerRefreshReceiver()}
+ @android.annotation.SuppressLint("UnspecifiedRegisterReceiverFlag")
+ private fun registerRefreshReceiver(){
+  // API 33+ has NOT_EXPORTED. Earlier releases are protected by our signature permission.
+  val permission="$packageName.SCAN_INTERNAL"
+  if(Build.VERSION.SDK_INT>=33)registerReceiver(refreshReceiver,IntentFilter(ScanSettings.ACTION),permission,null,Context.RECEIVER_NOT_EXPORTED)
+  else @Suppress("DEPRECATION") registerReceiver(refreshReceiver,IntentFilter(ScanSettings.ACTION),permission,null)
+ }
  override fun onStartCommand(i:Intent?,flags:Int,startId:Int):Int {
   if(!Store.read(this).enabled||!permitted(this)||Store.read(this).reservations.none{it.enabled&&it.trigger!="TIME"}){stopSelf();return START_NOT_STICKY}
   startForeground(101,Notices.build(this,"monitor","NearVoice · 위치 감지 준비","예약 날짜와 감지 시간대를 확인합니다.",true))
