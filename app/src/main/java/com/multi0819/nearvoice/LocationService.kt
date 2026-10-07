@@ -9,7 +9,9 @@ import java.time.LocalDate
 @android.annotation.SuppressLint("MissingPermission")
 class LocationService:Service(),LocationListener {
  private lateinit var manager:LocationManager
- private val tracker=EntryTracker()
+ private var tracker=EntryTracker()
+ private var scanning=false
+ private val refreshReceiver=object:BroadcastReceiver(){override fun onReceive(c:Context,i:Intent){refreshDetection()}}
  companion object {
   @Volatile var running=false
   @Volatile var latest:Location?=null
@@ -19,22 +21,26 @@ class LocationService:Service(),LocationListener {
   fun stop(c:Context){c.stopService(Intent(c,LocationService::class.java))}
  }
  override fun onBind(i:Intent?)=null
- override fun onCreate(){super.onCreate();manager=getSystemService(LocationManager::class.java)}
+ override fun onCreate(){super.onCreate();manager=getSystemService(LocationManager::class.java);if(Build.VERSION.SDK_INT>=33)registerReceiver(refreshReceiver,IntentFilter(ScanSettings.ACTION),Context.RECEIVER_NOT_EXPORTED)else @Suppress("DEPRECATION") registerReceiver(refreshReceiver,IntentFilter(ScanSettings.ACTION))}
  override fun onStartCommand(i:Intent?,flags:Int,startId:Int):Int {
-  if(!Store.read(this).enabled||!permitted(this)){stopSelf();return START_NOT_STICKY}
-  try {startForeground(101,Notices.build(this,"monitor","NearVoice · 감지 ON","목적지 접근을 확인하고 있습니다.",true))
-   running=true;manager.removeUpdates(this)
-   for(p in listOf(LocationManager.GPS_PROVIDER,LocationManager.NETWORK_PROVIDER))if(p in manager.allProviders)manager.requestLocationUpdates(p,15000L,0f,this)
-   status=if(if(Build.VERSION.SDK_INT>=28)manager.isLocationEnabled else manager.isProviderEnabled(LocationManager.GPS_PROVIDER)||manager.isProviderEnabled(LocationManager.NETWORK_PROVIDER))"위치 수신 대기"else"기기 위치 설정 OFF"
-   // Saving a reservation must evaluate an already occupied destination immediately.
-   val recent=(listOfNotNull(latest)+listOf(LocationManager.GPS_PROVIDER,LocationManager.NETWORK_PROVIDER).mapNotNull{p->runCatching{manager.getLastKnownLocation(p)}.getOrNull()})
-    .filter{it.hasAccuracy()&&Rules.locationUsable(SystemClock.elapsedRealtimeNanos()-it.elapsedRealtimeNanos,it.accuracy.toDouble())}.maxByOrNull{it.elapsedRealtimeNanos}
+  if(!Store.read(this).enabled||!permitted(this)||Store.read(this).reservations.none{it.enabled&&it.trigger!="TIME"}){stopSelf();return START_NOT_STICKY}
+  startForeground(101,Notices.build(this,"monitor","NearVoice · 위치 감지 준비","예약 날짜와 감지 시간대를 확인합니다.",true))
+  running=true;refreshDetection();return START_STICKY
+ }
+ private fun refreshDetection(){
+  if(!Store.read(this).enabled||!permitted(this)||Store.read(this).reservations.none{it.enabled&&it.trigger!="TIME"}){stopSelf();return}
+  try{
+   val active=ScanSettings.active(this)
+   if(!active){if(scanning)manager.removeUpdates(this);scanning=false;tracker=EntryTracker();status="감지 시간대 / 예약 날짜 대기";getSystemService(NotificationManager::class.java).notify(101,Notices.build(this,"monitor","NearVoice · 위치 감지 쉬는 중","예약 날짜의 감지 구간에서 자동으로 재개합니다.",true));return}
+   if(!scanning){manager.removeUpdates(this);for(p in listOf(LocationManager.GPS_PROVIDER,LocationManager.NETWORK_PROVIDER))if(p in manager.allProviders)manager.requestLocationUpdates(p,15000L,0f,this);scanning=true}
+   status="위치 수신 대기";getSystemService(NotificationManager::class.java).notify(101,Notices.build(this,"monitor","NearVoice · 감지 ON","목적지 접근을 확인하고 있습니다.",true))
+   val recent=(listOfNotNull(latest)+listOf(LocationManager.GPS_PROVIDER,LocationManager.NETWORK_PROVIDER).mapNotNull{p->runCatching{manager.getLastKnownLocation(p)}.getOrNull()}).filter{it.hasAccuracy()&&Rules.locationUsable(SystemClock.elapsedRealtimeNanos()-it.elapsedRealtimeNanos,it.accuracy.toDouble())}.maxByOrNull{it.elapsedRealtimeNanos}
    if(recent!=null&&(if(Build.VERSION.SDK_INT>=28)manager.isLocationEnabled else manager.isProviderEnabled(LocationManager.GPS_PROVIDER)||manager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)))onLocationChanged(recent)
   }catch(_:SecurityException){status="위치 권한 필요";Store.error(this,status);stopSelf()}
-  return START_STICKY
  }
  override fun onLocationChanged(l:Location){
   val s=Store.read(this);if(!s.enabled){stopSelf();return}
+  if(!ScanSettings.active(this)){refreshDetection();return}
   if(!l.hasAccuracy()||!Rules.locationUsable(SystemClock.elapsedRealtimeNanos()-l.elapsedRealtimeNanos,l.accuracy.toDouble()))return
   latest=l;status="감지 중 · 정확도 ±${l.accuracy.toInt()}m"
   val today=LocalDate.now()
@@ -49,5 +55,5 @@ class LocationService:Service(),LocationListener {
  override fun onProviderDisabled(provider:String){status="위치 신호 대기"}
  override fun onProviderEnabled(provider:String){status="위치 수신 대기"}
  @Deprecated("Legacy callback") override fun onStatusChanged(provider:String?,status:Int,extras:Bundle?){}
- override fun onDestroy(){manager.removeUpdates(this);running=false;status="위치 감지 OFF";super.onDestroy()}
+ override fun onDestroy(){unregisterReceiver(refreshReceiver);manager.removeUpdates(this);running=false;status="위치 감지 OFF";super.onDestroy()}
 }

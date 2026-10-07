@@ -23,7 +23,7 @@ class MainActivity:Activity(){
   startActivityForResult(Intent(this,PlacePicker::class.java).putExtra("shared_map",shared),10)
   i.action=null
  }
- override fun onResume(){super.onResume();TimeScheduler.reconcile(this);handler.post(update);updateStatus()}
+ override fun onResume(){super.onResume();TimeScheduler.reconcile(this);if(Store.read(this).enabled&&LocationService.permitted(this)&&Store.read(this).reservations.any{it.enabled&&it.trigger!="TIME"})runCatching{LocationService.start(this)};handler.post(update);updateStatus()}
  override fun onPause(){handler.removeCallbacks(update);super.onPause()}
  fun toast(s:String){Toast.makeText(this,s,Toast.LENGTH_LONG).show()}
  fun change(action:()->Unit){try{action()}catch(e:Exception){toast(e.message?:"저장에 실패했습니다.")}}
@@ -88,6 +88,7 @@ class MainActivity:Activity(){
  }
  fun settings(){subpage=true;statusView=null;nextView=null;warningsView=null;val c=Ui.page(this,"설정");c.addView(Ui.button(this,"‹ 예약 목록"){dashboard()});val s=Store.read(this)
   for(home in listOf(true,false)){val p=if(home)s.home else s.work;val title=if(home)"집"else"회사";c.addView(Ui.label(this,"$title · ${p?.label?:"주소 미등록"}",17f));c.addView(Ui.button(this,"$title 주소 등록 / 수정"){pickPlace(p){picked->change{Store.setPlace(this,home,picked);settings()}}})}
+  c.addView(Ui.button(this,"위치 감지 시간대 · ${if(ScanSettings.restricted(this))"제한 ON"else"제한 OFF"}"){scanWindowSettings()})
   val watch=Ui.toggle(this,"워치 모드 · 화면 OFF 시 알림 전달",Store.prefs(this).getBoolean("watch_mode",false));c.addView(watch)
   watch.setOnCheckedChangeListener{_,on->Store.prefs(this).edit().putBoolean("watch_mode",on).apply()}
   c.addView(Ui.label(this,"화면이 꺼져 있으면 휴대폰 직접 재생을 멈추고 워치 앱으로 메시지를 보냅니다. 워치용 NearVoice를 설치하고 음성 수신 ON을 켜세요. 연결이 없으면 문자 알림으로 전달합니다. Galaxy Wearable에서 NearVoice 알림과 휴대전화 알림 끄기를 켜세요. 워치가 연결되지 않아도 화면 OFF에서는 음성을 읽지 않습니다.",13f,Ui.muted))
