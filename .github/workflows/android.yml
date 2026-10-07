@@ -36,9 +36,9 @@ jobs:
       - name: Publish install APK
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.0.14
-          name: NearVoice v1.0.14 (테스트용)
-          body: 예약 목록을 메시지와 ON/OFF 중심으로 정리했습니다. 내용을 누르면 세부조건과 수정·테스트·삭제 메뉴가 팝업에 표시됩니다. 확인용 메시지를 숨기고 상단 패널과 버튼 색상을 정돈했습니다. 휴대폰만 업데이트하면 됩니다.
+          tag_name: watch-v1.0.7
+          name: NearVoice 워치 v1.0.7
+          body: 워치 음성 읽기를 미디어 음량으로 변경했습니다. 일반 알림 음량과 구분해서 조절할 수 있습니다. 워치용 APK만 기존 앱 위에 설치하세요. 휴대폰 앱은 변경되지 않았습니다.
           files: |
             NearVoice-phone.apk
             NearVoice-watch.apk

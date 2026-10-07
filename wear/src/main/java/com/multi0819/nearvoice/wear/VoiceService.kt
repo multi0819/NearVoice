@@ -31,7 +31,7 @@ class VoiceService:Service(){
  private fun next(){if(!ready||current!=null)return;val s=queue.poll()?:return;current=s;WatchNotices.show(this,s)
   if(!s.voice){finishSpeech();return};if(!voiceOk){WatchStore.status(this,"한국어 음성 없음 · 메시지를 확인하세요.");finishSpeech();return}
   wake=getSystemService(PowerManager::class.java).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK,"NearVoice:watchSpeech").apply{acquire(125000)}
-  val attributes=AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ALARM).setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build()
+  val attributes=AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA).setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build()
   focus=AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK).setAudioAttributes(attributes).setOnAudioFocusChangeListener{change->if(change==AudioManager.AUDIOFOCUS_LOSS)handler.post{finishSpeech()}}.build()
   getSystemService(AudioManager::class.java).requestAudioFocus(focus!!);tts?.setAudioAttributes(attributes)
   if(tts?.speak(s.message,TextToSpeech.QUEUE_FLUSH,Bundle(),s.key)!=TextToSpeech.SUCCESS){WatchStore.status(this,"음성 재생 실패");finishSpeech()}else{WatchStore.status(this,"읽는 중 · ${s.title}");handler.postDelayed(timeout,120000)}
