@@ -61,7 +61,7 @@ class MainActivity:Activity(){
   val repeat=when(r.repeat){"DAILY"->"매일";"WEEKDAYS"->r.weekdays.sorted().mapNotNull{days.getOrNull(it-1)}.joinToString(" · ");else->r.dates.sorted().joinToString(", ")}
   val details=buildList{
    add("알림 조건  ·  $mode");add("날짜 / 반복  ·  $repeat")
-   if(r.trigger!="LOCATION")add("시간  ·  ${r.time}")
+   if(r.trigger!="LOCATION")add("시간  ·  ${Rules.alarmTimes(r).sorted().joinToString(" · ")}")
    if(r.trigger!="TIME")r.place?.let{add("목적지  ·  ${it.label}");add("알림 반경  ·  ${r.radius.toInt()}m")}
    add("음성 읽기  ·  ${if(r.voice)"ON"else"OFF"}   /   진동  ·  ${if(r.vibration)"ON"else"OFF"}")
    add("알림음  ·  ${if(r.soundUri==null)"없음"else"선택됨"}")

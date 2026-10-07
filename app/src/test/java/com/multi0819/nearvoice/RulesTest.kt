@@ -149,4 +149,28 @@ class RulesTest {
   assertEquals("오늘은 선택한 날짜/요일이 아님",Rules.locationDiagnostic(r,d.plusDays(1),75.0,Entry(true,true)))
   assertEquals("오늘 위치 알림 실행 기록 있음",Rules.locationDiagnostic(r.copy(completed=mutableSetOf("LOCATION:$d")),d,75.0,Entry(true,true)))
  }
+ @Test fun timeOccurrenceIncludesDateAndClock() {
+  val r=Reservation(trigger="BOTH",time="09:00",dates=setOf("2026-10-08"),revision=1)
+  assertTrue(Rules.canDeliver(r,true,"TIME","2026-10-08@09:00",1))
+ }
+ @Test fun multipleTimesContinueAfterFirstOccurrenceCompletes() {
+  val now=ZonedDateTime.parse("2026-10-08T08:00:00+09:00[Asia/Seoul]")
+  val r=Reservation(trigger="BOTH",dates=setOf("2026-10-08"),times=setOf("17:00","09:00","14:00"),completed=mutableSetOf("TIME:2026-10-08@09:00"))
+  assertEquals("14:00",Rules.nextTime(r,now)!!.toLocalTime().toString())
+  assertFalse(Rules.canDeliver(r,true,"TIME","2026-10-08@09:00",r.revision))
+  assertTrue(Rules.canDeliver(r,true,"TIME","2026-10-08@14:00",r.revision))
+  assertFalse(Rules.canDeliver(r,true,"TIME","2026-10-08@10:00",r.revision))
+ }
+ @Test fun multipleTimesPreserveDatesAndLegacyCompletion() {
+  val now=ZonedDateTime.parse("2026-10-08T08:00:00+09:00[Asia/Seoul]")
+  val r=Reservation(dates=setOf("2026-10-08","2026-10-10"),times=setOf("09:00","14:00"),completed=mutableSetOf("TIME:2026-10-08"))
+  assertEquals("2026-10-10T09:00+09:00[Asia/Seoul]",Rules.nextTime(r,now).toString())
+  assertFalse(Rules.canDeliver(r,true,"TIME","2026-10-08@14:00",r.revision))
+ }
+ @Test fun multipleTimesRespectWeekdaysAndLocationMode() {
+  val now=ZonedDateTime.parse("2026-10-08T15:00:00+09:00[Asia/Seoul]")
+  val r=Reservation(repeat="WEEKDAYS",weekdays=setOf(5),times=setOf("09:00","14:00"))
+  assertEquals("2026-10-09T09:00+09:00[Asia/Seoul]",Rules.nextTime(r,now).toString())
+  assertNull(Rules.nextTime(r.copy(trigger="LOCATION"),now))
+ }
 }

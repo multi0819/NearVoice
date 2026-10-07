@@ -13,7 +13,7 @@ object TimeScheduler {
   p.getStringSet("scheduled",emptySet())!!.forEach{pending(c,it,PendingIntent.FLAG_NO_CREATE)?.let{pi->am.cancel(pi);pi.cancel()}}
   val state=Store.read(c);val keys=mutableSetOf<String>()
   if(state.enabled && exactAllowed(c))state.reservations.forEach{r->Rules.nextTime(r,ZonedDateTime.now())?.let{t->
-   val uri="nearvoice://time/${r.id}";val pi=pending(c,uri,PendingIntent.FLAG_UPDATE_CURRENT,r.revision,t.toLocalDate().toString())!!
+   val uri="nearvoice://time/${r.id}";val pi=pending(c,uri,PendingIntent.FLAG_UPDATE_CURRENT,r.revision,"${t.toLocalDate()}@${t.toLocalTime()}")!!
    try{am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP,t.toInstant().toEpochMilli(),pi);keys.add(uri)}catch(_:SecurityException){Store.error(c,"정확한 알람 권한이 필요합니다.")}
   }}
   val boundaryIntent=Intent(c,AlarmReceiver::class.java).setAction("LOCATION_WINDOW").setData(Uri.parse("nearvoice://scan-window"))
@@ -31,7 +31,7 @@ class AlarmReceiver:BroadcastReceiver(){override fun onReceive(c:Context,i:Inten
  if(i.action=="LOCATION_WINDOW"){TimeScheduler.reconcile(c);return}
  if(i.action=="android.intent.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED"){TimeScheduler.reconcile(c);return}
  val id=i.data?.lastPathSegment?:return;val date=i.getStringExtra("date")?:return;val s=Store.read(c);val r=s.reservations.find{it.id==id}
- if(date!=LocalDate.now().toString()){TimeScheduler.reconcile(c);return}
+ if(date.substringBefore("@")!=LocalDate.now().toString()){TimeScheduler.reconcile(c);return}
  if(Rules.canDeliver(r,s.enabled,"TIME",date,i.getLongExtra("revision",-1)))PlaybackService.enqueue(c,r!!,"TIME",date)
  TimeScheduler.reconcile(c)
 }}

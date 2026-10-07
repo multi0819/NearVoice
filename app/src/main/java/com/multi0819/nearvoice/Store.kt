@@ -10,12 +10,12 @@ object Codec {
  fun strings(a:JSONArray?):Set<String> = if(a==null)emptySet() else (0 until a.length()).map{a.getString(it)}.toSet()
  fun json(r:Reservation):JSONObject = JSONObject().put("id",r.id).put("title",r.title).put("message",r.message).put("enabled",r.enabled)
   .put("trigger",r.trigger).put("place",place(r.place)).put("radius",r.radius).put("dates",JSONArray(r.dates.toList())).put("repeat",r.repeat)
-  .put("weekdays",JSONArray(r.weekdays.toList())).put("time",r.time).put("voice",r.voice).put("vibration",r.vibration)
+  .put("weekdays",JSONArray(r.weekdays.toList())).put("time",r.time).put("times",JSONArray(r.times.toList())).put("voice",r.voice).put("vibration",r.vibration)
   .put("soundUri",r.soundUri).put("completed",JSONArray(r.completed.toList())).put("revision",r.revision)
  fun reservation(j:JSONObject) = Reservation(id=j.getString("id"),title=j.optString("title","예약"),message=j.optString("message"),
   enabled=j.optBoolean("enabled",true),trigger=j.optString("trigger","TIME"),place=place(j.optJSONObject("place")),radius=j.optDouble("radius",300.0),
   dates=strings(j.optJSONArray("dates")),repeat=j.optString("repeat","DATES"),weekdays=stringsAsInts(j.optJSONArray("weekdays")),
-  time=j.optString("time","09:00"),voice=j.optBoolean("voice",true),vibration=j.optBoolean("vibration",true),
+  time=j.optString("time","09:00"),times=strings(j.optJSONArray("times")),voice=j.optBoolean("voice",true),vibration=j.optBoolean("vibration",true),
   soundUri=if(j.isNull("soundUri"))null else j.getString("soundUri"),completed=strings(j.optJSONArray("completed")).toMutableSet(),revision=j.optLong("revision",0))
  private fun stringsAsInts(a:JSONArray?)=if(a==null)emptySet() else (0 until a.length()).map{a.getInt(it)}.toSet()
 }

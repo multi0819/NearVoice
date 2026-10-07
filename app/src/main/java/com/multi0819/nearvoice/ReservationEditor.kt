@@ -23,15 +23,20 @@ fun MainActivity.openEditor(original:Reservation?,initialPlace:Place?=null){subp
  var dates=base.dates;val calendar=MultiDateCalendar(this,dates){dates=it};c.addView(calendar)
  val days=Ui.row(this);val weekdayChecks=(1..7).map{n->CheckBox(this).apply{text=listOf("월","화","수","목","금","토","일")[n-1];setTextColor(Ui.text);textSize=12f;setPadding(0,0,0,0);isChecked=n in base.weekdays;Ui.weighted(days,this)}};c.addView(days)
  repeat.onItemSelectedListener=object:AdapterView.OnItemSelectedListener{override fun onNothingSelected(p:AdapterView<*>?){};override fun onItemSelected(p:AdapterView<*>?,v:View?,pos:Int,id:Long){calendar.visibility=if(pos==0)View.VISIBLE else View.GONE;days.visibility=if(pos==2)View.VISIBLE else View.GONE}}
- var time=runCatching{LocalTime.parse(base.time)}.getOrDefault(LocalTime.of(9,0));val timeButton=Ui.button(this,"알림 시간 · $time"){}
- timeButton.setOnClickListener{TimePickerDialog(this,{_,h,m->time=LocalTime.of(h,m);timeButton.text="알림 시간 · $time"},time.hour,time.minute,true).show()};c.addView(timeButton)
+ val times=Rules.alarmTimes(base).toMutableSet();val timeBox=Ui.column(this);c.addView(timeBox)
+ fun drawTimes(){timeBox.removeAllViews();timeBox.addView(Ui.label(this,"알림 시간 (복수 선택)",16f))
+  times.sorted().forEach{value->val clock=LocalTime.parse(value);val row=Ui.row(this)
+   Ui.weighted(row,Ui.button(this,value){TimePickerDialog(this,{_,h,m->times.remove(value);times.add(LocalTime.of(h,m).toString());drawTimes()},clock.hour,clock.minute,true).show()})
+   Ui.weighted(row,Ui.button(this,"삭제"){if(times.size==1)toast("알림 시간은 하나 이상 필요합니다.")else{times.remove(value);drawTimes()}});timeBox.addView(row)}
+  timeBox.addView(Ui.button(this,"+ 시간 추가"){TimePickerDialog(this,{_,h,m->times.add(LocalTime.of(h,m).toString());drawTimes()},9,0,true).show()})
+ };drawTimes()
  c.addView(Ui.label(this,"위치 알림은 선택 날짜에 활성화됩니다. 시간 알림은 선택 날짜의 지정 시각에 실행됩니다.",13f,Ui.muted))
  val voice=Ui.toggle(this,"메시지 음성 읽기",base.voice);val vibration=Ui.toggle(this,"진동",base.vibration);c.addView(voice);c.addView(vibration)
  var sound=base.soundUri;val soundText=Ui.label(this,if(sound==null)"알림음 없음"else"알림음 선택됨",13f,Ui.muted);c.addView(soundText)
  val soundRow=Ui.row(this);Ui.weighted(soundRow,Ui.button(this,"알림음 선택"){soundCallback={uri->sound=uri;soundText.text=if(uri==null)"알림음 없음"else"알림음 선택됨"};val i=Intent(RingtoneManager.ACTION_RINGTONE_PICKER).putExtra(RingtoneManager.EXTRA_RINGTONE_TYPE,RingtoneManager.TYPE_ALARM).putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_SILENT,true).putExtra(RingtoneManager.EXTRA_RINGTONE_EXISTING_URI,sound?.let{Uri.parse(it)});startActivityForResult(i,11)})
  Ui.weighted(soundRow,Ui.button(this,"소리 끄기"){sound=null;soundText.text="알림음 없음"});c.addView(soundRow)
  fun draft()=base.copy(title=title.text.toString().trim().ifEmpty{"예약"},message=message.text.toString().trim(),trigger=modes[trigger.selectedItemPosition],place=place,
-  radius=radius.text.toString().toDoubleOrNull()?:0.0,dates=dates,repeat=repeats[repeat.selectedItemPosition],weekdays=weekdayChecks.mapIndexedNotNull{idx,b->if(b.isChecked)idx+1 else null}.toSet(),time=time.toString(),voice=voice.isChecked,vibration=vibration.isChecked,soundUri=sound,completed=base.completed.toMutableSet(),revision=maxOf(System.currentTimeMillis(),base.revision+1))
+  radius=radius.text.toString().toDoubleOrNull()?:0.0,dates=dates,repeat=repeats[repeat.selectedItemPosition],weekdays=weekdayChecks.mapIndexedNotNull{idx,b->if(b.isChecked)idx+1 else null}.toSet(),time=times.sorted().first(),times=times.toSet(),voice=voice.isChecked,vibration=vibration.isChecked,soundUri=sound,completed=base.completed.toMutableSet(),revision=maxOf(System.currentTimeMillis(),base.revision+1))
  c.addView(Ui.space(this));val controls=Ui.row(this);Ui.weighted(controls,Ui.button(this,"미리 듣기"){val r=draft();if(r.message.isBlank())toast("메시지를 입력하세요.")else PlaybackService.test(this,r)})
  Ui.weighted(controls,Ui.button(this,"예약 저장"){val r=draft();val error=Rules.validate(r);if(error!=null){toast(error);return@button}
   if(!Rules.timeScheduleValid(r,ZonedDateTime.now(),original==null)){toast("앞으로 실행할 날짜와 시간을 선택하세요.");return@button}
