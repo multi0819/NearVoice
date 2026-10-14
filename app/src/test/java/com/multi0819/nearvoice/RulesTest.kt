@@ -3,6 +3,11 @@ import org.junit.Test
 import org.junit.Assert.*
 import java.time.*
 class RulesTest {
+ @Test fun combinedReservationCannotFireFromLocationAlone() {
+  val r=Reservation(trigger="BOTH",dates=setOf("2026-10-15"),time="08:00",revision=1)
+  assertFalse(Rules.canDeliver(r,true,"LOCATION","2026-10-15",1))
+ }
+
  private val zone = ZoneId.of("Asia/Seoul")
  private fun at(s:String) = LocalDateTime.parse(s).atZone(zone)
  @Test fun selectedDatesIncludeLeapDayAndSkipCompleted() {
