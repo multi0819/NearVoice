@@ -16,7 +16,14 @@ class PlaybackService:Service(){
  companion object {
   private fun report(c:Context,r:Reservation,condition:String,message:String){if(condition!="TEST")Store.prefs(c).edit().putLong("delivery_revision_${r.id}",r.revision).putString("delivery_${r.id}","${java.time.LocalTime.now().withNano(0)} · $message").apply()}
   fun enqueue(c:Context,r:Reservation,condition:String,date:String){if(condition!="TEST"&&!DeliveryConditions.allowed(c,r,condition,date))return;report(c,r,condition,"자동 알림 시작 요청");try{c.startForegroundService(Intent(c,PlaybackService::class.java).putExtra("reservation",Codec.json(r).toString()).putExtra("condition",condition).putExtra("date",date))}
-   catch(e:RuntimeException){report(c,r,condition,"자동 알림 시작 실패");Store.error(c,"자동 읽기를 시작하지 못했습니다. 앱에서 권한을 확인하세요.");Notices.alert(c,r.title,r.message)}
+   catch(e:RuntimeException){
+    // Consume fallback delivery too: BOTH retries pending clocks on every location fix.
+    if(condition!="TEST"){
+     if(!DeliveryConditions.allowed(c,r,condition,date))return
+     Store.complete(c,r.id,condition,date)
+    }
+    report(c,r,condition,"자동 읽기 시작 실패 · 시스템 알림 전달");Store.error(c,"자동 읽기를 시작하지 못했습니다. 앱에서 권한을 확인하세요.");Notices.alert(c,r.title,r.message,r.id.hashCode())
+   }
   }
   fun test(c:Context,r:Reservation){enqueue(c,r,"TEST",java.time.LocalDate.now().toString())}
  }
