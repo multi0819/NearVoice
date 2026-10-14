@@ -15,7 +15,7 @@ class PlaybackService:Service(){
  private val finishTimeout=Runnable{finishCurrent()}
  companion object {
   private fun report(c:Context,r:Reservation,condition:String,message:String){if(condition!="TEST")Store.prefs(c).edit().putLong("delivery_revision_${r.id}",r.revision).putString("delivery_${r.id}","${java.time.LocalTime.now().withNano(0)} · $message").apply()}
-  fun enqueue(c:Context,r:Reservation,condition:String,date:String){report(c,r,condition,"자동 알림 시작 요청");try{c.startForegroundService(Intent(c,PlaybackService::class.java).putExtra("reservation",Codec.json(r).toString()).putExtra("condition",condition).putExtra("date",date))}
+  fun enqueue(c:Context,r:Reservation,condition:String,date:String){if(condition!="TEST"&&!DeliveryConditions.allowed(c,r,condition,date))return;report(c,r,condition,"자동 알림 시작 요청");try{c.startForegroundService(Intent(c,PlaybackService::class.java).putExtra("reservation",Codec.json(r).toString()).putExtra("condition",condition).putExtra("date",date))}
    catch(e:RuntimeException){report(c,r,condition,"자동 알림 시작 실패");Store.error(c,"자동 읽기를 시작하지 못했습니다. 앱에서 권한을 확인하세요.");Notices.alert(c,r.title,r.message)}
   }
   fun test(c:Context,r:Reservation){enqueue(c,r,"TEST",java.time.LocalDate.now().toString())}
@@ -45,7 +45,7 @@ class PlaybackService:Service(){
  private fun next(){if(!initialized||current!=null)return
   val key=queue.poll()?:run{stopSelf();return};val event=events[key]?:run{queue.done(key);next();return}
   val (snapshot,condition,date)=event;val state=Store.read(this);val r=if(condition=="TEST")snapshot else state.reservations.find{it.id==snapshot.id}
-  if(condition!="TEST"&&!Rules.canDeliver(r,state.enabled,condition,date,snapshot.revision)){report(this,snapshot,condition,"예약 변경·OFF·날짜·실행 기록 때문에 취소");events.remove(key);queue.done(key);next();return}
+  if(condition!="TEST"&&(r==null||r.revision!=snapshot.revision||!DeliveryConditions.allowed(this,r,condition,date))){report(this,snapshot,condition,"예약 변경·OFF·날짜·실행 기록 때문에 취소");events.remove(key);queue.done(key);next();return}
   current=key
   report(this,snapshot,condition,"자동 알림 조건 통과 · 재생 준비")
   if(condition!="TEST")Store.complete(this,snapshot.id,condition,date)

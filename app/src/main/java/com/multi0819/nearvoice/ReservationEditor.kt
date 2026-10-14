@@ -30,7 +30,7 @@ fun MainActivity.openEditor(original:Reservation?,initialPlace:Place?=null){subp
    Ui.weighted(row,Ui.button(this,"삭제"){if(times.size==1)toast("알림 시간은 하나 이상 필요합니다.")else{times.remove(value);drawTimes()}});timeBox.addView(row)}
   timeBox.addView(Ui.button(this,"+ 시간 추가"){TimePickerDialog(this,{_,h,m->times.add(LocalTime.of(h,m).toString());drawTimes()},9,0,true).show()})
  };drawTimes()
- c.addView(Ui.label(this,"위치 알림은 선택 날짜에 활성화됩니다. 시간 알림은 선택 날짜의 지정 시각에 실행됩니다.",13f,Ui.muted))
+ c.addView(Ui.label(this,"위치+시간은 선택 날짜의 지정 시각 이후, 목적지 반경 안이며 감지 시간대일 때 각 시각별 한 번 실행됩니다. 위치 전용은 접근 시, 시간 전용은 지정 시각에 실행됩니다.",13f,Ui.muted))
  val voice=Ui.toggle(this,"메시지 음성 읽기",base.voice);val vibration=Ui.toggle(this,"진동",base.vibration);c.addView(voice);c.addView(vibration)
  var sound=base.soundUri;val soundText=Ui.label(this,if(sound==null)"알림음 없음"else"알림음 선택됨",13f,Ui.muted);c.addView(soundText)
  val soundRow=Ui.row(this);Ui.weighted(soundRow,Ui.button(this,"알림음 선택"){soundCallback={uri->sound=uri;soundText.text=if(uri==null)"알림음 없음"else"알림음 선택됨"};val i=Intent(RingtoneManager.ACTION_RINGTONE_PICKER).putExtra(RingtoneManager.EXTRA_RINGTONE_TYPE,RingtoneManager.TYPE_ALARM).putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_SILENT,true).putExtra(RingtoneManager.EXTRA_RINGTONE_EXISTING_URI,sound?.let{Uri.parse(it)});startActivityForResult(i,11)})

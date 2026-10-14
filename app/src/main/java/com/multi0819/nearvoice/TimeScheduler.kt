@@ -32,7 +32,7 @@ class AlarmReceiver:BroadcastReceiver(){override fun onReceive(c:Context,i:Inten
  if(i.action=="android.intent.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED"){TimeScheduler.reconcile(c);return}
  val id=i.data?.lastPathSegment?:return;val date=i.getStringExtra("date")?:return;val s=Store.read(c);val r=s.reservations.find{it.id==id}
  if(date.substringBefore("@")!=LocalDate.now().toString()){TimeScheduler.reconcile(c);return}
- if(Rules.canDeliver(r,s.enabled,"TIME",date,i.getLongExtra("revision",-1)))PlaybackService.enqueue(c,r!!,"TIME",date)
+ if(r!=null&&r.revision==i.getLongExtra("revision",-1)&&DeliveryConditions.allowed(c,r,"TIME",date))PlaybackService.enqueue(c,r,"TIME",date)
  TimeScheduler.reconcile(c)
 }}
 class BootReceiver:BroadcastReceiver(){override fun onReceive(c:Context,i:Intent){TimeScheduler.reconcile(c)

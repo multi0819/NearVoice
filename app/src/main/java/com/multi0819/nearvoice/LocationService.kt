@@ -56,7 +56,9 @@ class LocationService:Service(),LocationListener {
    val result=FloatArray(1);Location.distanceBetween(l.latitude,l.longitude,p.latitude,p.longitude,result)
    val e=tracker.update(r.id,r.revision,result[0].toDouble(),r.radius,today.toString())
    Store.prefs(this).edit().putLong("location_check_revision_${r.id}",r.revision).putString("location_check_${r.id}","${java.time.LocalTime.now().withNano(0)} · 거리 ${result[0].toInt()}m / 반경 ${r.radius.toInt()}m\n${Rules.locationDiagnostic(r,today,result[0].toDouble(),e)}").apply()
-   if(e.fire&&Rules.locationAllowed(r,today))PlaybackService.enqueue(this,r,"LOCATION",today.toString())
+   if(r.trigger=="BOTH"){
+    if(result[0].toDouble()<=r.radius)Rules.combinedDue(r,java.time.ZonedDateTime.now()).forEach{occurrence->PlaybackService.enqueue(this,r,"TIME",occurrence)}
+   }else if(e.fire&&Rules.locationAllowed(r,today))PlaybackService.enqueue(this,r,"LOCATION",today.toString())
   }
  }
  override fun onProviderDisabled(provider:String){status="위치 신호 대기"}

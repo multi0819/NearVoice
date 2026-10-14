@@ -4,9 +4,10 @@ object Rules {
  fun locationDiagnostic(r:Reservation,date:LocalDate,distance:Double,e:Entry):String = when {
   !r.enabled->"예약 OFF"
   r.trigger=="TIME"->"시간 예약"
-  r.repeat in setOf("DATES","ONCE")&&"LOCATION:$date" in r.completed->"오늘 위치 알림 실행 기록 있음"
+  r.trigger=="LOCATION"&&r.repeat in setOf("DATES","ONCE")&&"LOCATION:$date" in r.completed->"오늘 위치 알림 실행 기록 있음"
   !locationAllowed(r,date)->"오늘은 선택한 날짜/요일이 아님"
   !distance.isFinite()->"거리 확인 불가"
+  r.trigger=="BOTH"->if(distance>r.radius)"반경 밖"else"반경 안 · 지정 시각 및 실행 기록 확인"
   e.fire->"반경 안 · 알림 요청"
   e.inside->"반경 안 · 이미 진입 처리됨"
   else->"반경 밖"
@@ -23,7 +24,7 @@ object Rules {
    .filter{"TIME:$it" !in r.completed}.flatMap{date->clocks.asSequence().filter{"TIME:$date@$it" !in r.completed}.map{date.atTime(it).atZone(after.zone)}}.firstOrNull{it.isAfter(after)}
  }
  fun locationAllowed(r:Reservation,date:LocalDate):Boolean {
-  if(!r.enabled||r.trigger=="TIME"||(r.repeat in setOf("DATES","ONCE")&&"LOCATION:$date" in r.completed))return false
+  if(!r.enabled||r.trigger=="TIME"||(r.trigger=="LOCATION"&&r.repeat in setOf("DATES","ONCE")&&"LOCATION:$date" in r.completed))return false
   return when(r.repeat){"DATES","ONCE"->date.toString() in r.dates;"WEEKDAYS"->date.dayOfWeek.value in r.weekdays;else->true}
  }
  fun entry(distance:Double,radius:Double,wasInside:Boolean):Entry {
@@ -51,11 +52,31 @@ object Rules {
  fun canDeliver(r:Reservation?,enabled:Boolean,condition:String,date:String,revision:Long):Boolean {
   if(r==null||!enabled||!r.enabled||r.revision!=revision||((condition=="TIME"||r.repeat in setOf("DATES","ONCE"))&&"$condition:$date" in r.completed))return false
   val d=runCatching{LocalDate.parse(date.substringBefore("@"))}.getOrNull()?:return false
-  if(condition=="LOCATION")return locationAllowed(r,d)
+  if(condition=="LOCATION")return r.trigger=="LOCATION"&&locationAllowed(r,d)
   if(condition!="TIME"||r.trigger=="LOCATION")return false
   if("TIME:$d" in r.completed)return false
   if("@" in date && date.substringAfter("@") !in alarmTimes(r))return false
   return when(r.repeat){"DATES","ONCE"->d.toString() in r.dates;"WEEKDAYS"->d.dayOfWeek.value in r.weekdays;else->true}
+ }
+ // Metadata eligibility is rechecked together with live date, clock and location before delivery.
+ fun deliveryAllowed(r:Reservation?,enabled:Boolean,condition:String,date:String,revision:Long,now:ZonedDateTime,
+  distance:Double=Double.NaN,scanActive:Boolean=false,locationFresh:Boolean=false):Boolean {
+  if(!canDeliver(r,enabled,condition,date,revision)||r==null)return false
+  if(date.substringBefore("@")!=now.toLocalDate().toString())return false
+  if(condition=="TIME"){
+   val clock=runCatching{LocalTime.parse(date.substringAfter("@",r.time))}.getOrNull()?:return false
+   if(now.toLocalTime()<clock)return false
+  }
+  return r.trigger!="BOTH"||(condition=="TIME"&&"@" in date&&scanActive&&locationFresh&&distance.isFinite()&&distance>=0&&distance<=r.radius)
+ }
+ fun combinedDue(r:Reservation,now:ZonedDateTime):List<String> {
+  if(r.trigger!="BOTH"||!locationAllowed(r,now.toLocalDate()))return emptyList()
+  val date=now.toLocalDate().toString()
+  return alarmTimes(r).sorted().mapNotNull{clock->
+   val time=runCatching{LocalTime.parse(clock)}.getOrNull()?:return@mapNotNull null
+   val occurrence="$date@$clock"
+   occurrence.takeIf{time<=now.toLocalTime()&&canDeliver(r,true,"TIME",it,r.revision)}
+  }
  }
  fun mergeSaved(incoming:Reservation,current:Reservation?,rearm:Boolean=false):Reservation = incoming.copy(completed=if(rearm)mutableSetOf() else (incoming.completed+(current?.completed?:emptySet())).toMutableSet())
  fun timeScheduleValid(r:Reservation,now:ZonedDateTime,isNew:Boolean):Boolean {

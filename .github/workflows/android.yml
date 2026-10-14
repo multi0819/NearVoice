@@ -36,9 +36,9 @@ jobs:
       - name: Publish install APK
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.0.16
-          name: NearVoice v1.0.16
-          body: 한 예약에 여러 알림 시간을 추가할 수 있습니다. 각 시간별 실행 기록을 분리했습니다. 기존 날짜와 반복 설정 및 위치 감지 시간대는 유지됩니다. 휴대폰 APK만 기존 앱 위에 설치하세요.
+          tag_name: v1.0.17
+          name: NearVoice v1.0.17
+          body: 위치+시간 예약은 선택 날짜의 지정 시각 이후 목적지 반경과 감지 시간대가 모두 맞을 때만 각 시각별 한 번 실행합니다. 조기 위치 알림을 차단하고 재생 직전 조건을 재검사합니다. 기존 앱을 삭제하지 말고 휴대폰 APK를 위에 설치하세요. 앱 ID와 서명키를 유지해 기존 예약과 설정을 보존합니다.
           files: |
             NearVoice-phone.apk
             NearVoice-watch.apk

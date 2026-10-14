@@ -28,11 +28,11 @@ class RulesTest {
   assertEquals(Entry(false,false),Rules.entry(370.0,300.0,true))
   assertEquals(Entry(true,true),Rules.entry(280.0,300.0,false))
  }
- @Test fun locationDateAndConditionCompletionAreIndependent() {
+ @Test fun locationOnlyCompletionDoesNotBlockCombinedTimeOccurrences() {
   val r=Reservation(repeat="DATES",dates=setOf("2026-10-05","2026-11-03"),trigger="BOTH")
   assertFalse(Rules.locationAllowed(r,LocalDate.parse("2026-10-06")))
   r.completed.add("LOCATION:2026-10-05")
-  assertFalse(Rules.locationAllowed(r,LocalDate.parse("2026-10-05")))
+  assertTrue(Rules.locationAllowed(r,LocalDate.parse("2026-10-05")))
   assertTrue(Rules.locationAllowed(r,LocalDate.parse("2026-11-03")))
   assertNotNull(Rules.nextTime(r,at("2026-10-05T01:00")))
  }
@@ -60,7 +60,7 @@ class RulesTest {
   assertTrue(Rules.canDeliver(r,true,"TIME","2026-10-05",5))
   r.completed.add("TIME:2026-10-05")
   assertFalse(Rules.canDeliver(r,true,"TIME","2026-10-05",5))
-  assertTrue(Rules.canDeliver(r,true,"LOCATION","2026-10-05",5))
+  assertFalse(Rules.canDeliver(r,true,"LOCATION","2026-10-05",5))
  }
  @Test fun queueIsSerialAndDeduplicated() {
   val q=EventQueue()
@@ -105,7 +105,7 @@ class RulesTest {
   val saved=Rules.mergeSaved(current.copy(message="수정 메시지",revision=2),current,true)
   assertEquals(at("2026-10-05T13:00"),Rules.nextTime(saved,at("2026-10-05T12:00")))
   assertTrue(Rules.canDeliver(saved,true,"TIME","2026-10-05",2))
-  assertTrue(Rules.canDeliver(saved,true,"LOCATION","2026-10-05",2))
+  assertFalse(Rules.canDeliver(saved,true,"LOCATION","2026-10-05",2))
   assertFalse(Rules.canDeliver(saved,true,"TIME","2026-10-05",1))
   val tracker=EntryTracker();assertTrue(tracker.update(current.id,1,100.0,300.0,"2026-10-05").fire)
   assertTrue(tracker.update(saved.id,2,100.0,300.0,"2026-10-05").fire)
@@ -177,5 +177,36 @@ class RulesTest {
   val r=Reservation(repeat="WEEKDAYS",weekdays=setOf(5),times=setOf("09:00","14:00"))
   assertEquals("2026-10-09T09:00+09:00[Asia/Seoul]",Rules.nextTime(r,now).toString())
   assertNull(Rules.nextTime(r.copy(trigger="LOCATION"),now))
+ }
+ @Test fun combinedConditionsRejectEarlyOutsideWrongDateAndInactiveWindow() {
+  val r=Reservation(trigger="BOTH",dates=setOf("2026-10-15"),times=setOf("08:00","14:00"),revision=1)
+  fun allowed(t:String,d:Double=50.0,active:Boolean=true,fresh:Boolean=true)=Rules.deliveryAllowed(r,true,"TIME","2026-10-15@08:00",1,at(t),d,active,fresh)
+  assertFalse(allowed("2026-10-15T07:03"))
+  assertFalse(allowed("2026-10-14T08:00"))
+  assertFalse(allowed("2026-10-16T08:00"))
+  assertFalse(allowed("2026-10-15T08:00",301.0))
+  assertFalse(allowed("2026-10-15T08:00",Double.NaN))
+  assertFalse(allowed("2026-10-15T08:00",active=false))
+  assertFalse(allowed("2026-10-15T08:00",fresh=false))
+  assertTrue(allowed("2026-10-15T08:00"))
+  assertTrue(allowed("2026-10-15T08:05"))
+  r.completed.add("TIME:2026-10-15@08:00")
+  assertFalse(allowed("2026-10-15T08:05"))
+ }
+ @Test fun combinedDueTimesWaitEvenWhenAlreadyInsideAndUseSeparateCompletion() {
+  val r=Reservation(trigger="BOTH",dates=setOf("2026-10-15"),times=setOf("09:00","14:00"),completed=mutableSetOf("LOCATION:2026-10-15"))
+  assertTrue(Rules.locationAllowed(r,LocalDate.parse("2026-10-15")))
+  assertEquals(emptyList<String>(),Rules.combinedDue(r,at("2026-10-15T07:02")))
+  assertEquals(listOf("2026-10-15@09:00"),Rules.combinedDue(r,at("2026-10-15T09:00")))
+  r.completed.add("TIME:2026-10-15@09:00")
+  assertEquals(emptyList<String>(),Rules.combinedDue(r,at("2026-10-15T13:59")))
+  assertEquals(listOf("2026-10-15@14:00"),Rules.combinedDue(r,at("2026-10-15T14:00")))
+  assertEquals(emptyList<String>(),Rules.combinedDue(r,at("2026-10-16T14:00")))
+ }
+ @Test fun timeOnlyRejectsEarlyAndExpiredDateWithoutRequiringLocation() {
+  val r=Reservation(trigger="TIME",dates=setOf("2026-10-08","2026-10-12"),time="18:00",revision=1)
+  assertFalse(Rules.deliveryAllowed(r,true,"TIME","2026-10-12@18:00",1,at("2026-10-15T07:02")))
+  assertFalse(Rules.deliveryAllowed(r,true,"TIME","2026-10-12@18:00",1,at("2026-10-12T07:02")))
+  assertTrue(Rules.deliveryAllowed(r,true,"TIME","2026-10-12@18:00",1,at("2026-10-12T18:00")))
  }
 }

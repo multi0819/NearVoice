@@ -60,7 +60,7 @@ class MainActivity:Activity(){
   val days=listOf("월","화","수","목","금","토","일")
   val repeat=when(r.repeat){"DAILY"->"매일";"WEEKDAYS"->r.weekdays.sorted().mapNotNull{days.getOrNull(it-1)}.joinToString(" · ");else->r.dates.sorted().joinToString(", ")}
   val details=buildList{
-   add("알림 조건  ·  $mode");add("날짜 / 반복  ·  $repeat")
+   add("알림 조건  ·  $mode");if(r.trigger=="BOTH")add("선택 날짜 · 지정 시각 이후 · 목적지 반경 · 감지 시간대가 모두 맞아야 알립니다.");add("날짜 / 반복  ·  $repeat")
    if(r.trigger!="LOCATION")add("시간  ·  ${Rules.alarmTimes(r).sorted().joinToString(" · ")}")
    if(r.trigger!="TIME")r.place?.let{add("목적지  ·  ${it.label}");add("알림 반경  ·  ${r.radius.toInt()}m")}
    add("음성 읽기  ·  ${if(r.voice)"ON"else"OFF"}   /   진동  ·  ${if(r.vibration)"ON"else"OFF"}")
