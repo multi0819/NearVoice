@@ -10,7 +10,7 @@ import java.time.LocalDate
 class LocationService:Service(),LocationListener {
  private lateinit var manager:LocationManager
  private var tracker=EntryTracker()
- private var scanning=false
+ private var intervalMillis=0L
  private val refreshReceiver=object:BroadcastReceiver(){override fun onReceive(c:Context,i:Intent){refreshDetection()}}
  companion object {
   @Volatile var running=false
@@ -34,12 +34,22 @@ class LocationService:Service(),LocationListener {
   startForeground(101,Notices.build(this,"monitor","NearVoice · 위치 감지 준비","예약 날짜와 감지 시간대를 확인합니다.",true))
   running=true;refreshDetection();return START_STICKY
  }
+ private fun setScanInterval(interval:Long){
+  if(interval==intervalMillis)return
+  manager.removeUpdates(this)
+  intervalMillis=0L
+  if(interval==0L)return
+  for(provider in listOf(LocationManager.GPS_PROVIDER,LocationManager.NETWORK_PROVIDER)){
+   if(provider in manager.allProviders)manager.requestLocationUpdates(provider,interval,0f,this)
+  }
+  intervalMillis=interval
+ }
  private fun refreshDetection(){
   if(!Store.read(this).enabled||!permitted(this)||Store.read(this).reservations.none{it.enabled&&it.trigger!="TIME"}){stopSelf();return}
   try{
    val active=ScanSettings.active(this)
-   if(!active){if(scanning)manager.removeUpdates(this);scanning=false;tracker=EntryTracker();status="감지 시간대 / 예약 날짜 대기";getSystemService(NotificationManager::class.java).notify(101,Notices.build(this,"monitor","NearVoice · 위치 감지 쉬는 중","예약 날짜의 감지 구간에서 자동으로 재개합니다.",true));return}
-   if(!scanning){manager.removeUpdates(this);for(p in listOf(LocationManager.GPS_PROVIDER,LocationManager.NETWORK_PROVIDER))if(p in manager.allProviders)manager.requestLocationUpdates(p,15000L,0f,this);scanning=true}
+   if(!active){setScanInterval(0L);tracker=EntryTracker();status="감지 시간대 / 예약 날짜 대기";getSystemService(NotificationManager::class.java).notify(101,Notices.build(this,"monitor","NearVoice · 위치 감지 쉬는 중","예약 날짜의 감지 구간에서 자동으로 재개합니다.",true));return}
+   setScanInterval(15_000L)
    status="위치 수신 대기";getSystemService(NotificationManager::class.java).notify(101,Notices.build(this,"monitor","NearVoice · 감지 ON","목적지 접근을 확인하고 있습니다.",true))
    val recent=(listOfNotNull(latest)+listOf(LocationManager.GPS_PROVIDER,LocationManager.NETWORK_PROVIDER).mapNotNull{p->runCatching{manager.getLastKnownLocation(p)}.getOrNull()}).filter{it.hasAccuracy()&&Rules.locationUsable(SystemClock.elapsedRealtimeNanos()-it.elapsedRealtimeNanos,it.accuracy.toDouble())}.maxByOrNull{it.elapsedRealtimeNanos}
    if(recent!=null&&(if(Build.VERSION.SDK_INT>=28)manager.isLocationEnabled else manager.isProviderEnabled(LocationManager.GPS_PROVIDER)||manager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)))onLocationChanged(recent)
@@ -52,14 +62,23 @@ class LocationService:Service(),LocationListener {
   latest=l;status="감지 중 · 정확도 ±${l.accuracy.toInt()}m"
   val today=LocalDate.now()
   val currentKeys=s.reservations.map{"${it.id}:${it.revision}"}.toSet();tracker.retain(currentKeys)
+  var nearestBoundary=Double.POSITIVE_INFINITY
   s.reservations.forEach{r->val p=r.place?:return@forEach;if(!r.enabled||r.trigger=="TIME")return@forEach
    val result=FloatArray(1);Location.distanceBetween(l.latitude,l.longitude,p.latitude,p.longitude,result)
+   if(Rules.locationAllowed(r,today))nearestBoundary=minOf(nearestBoundary,result[0].toDouble()-r.radius-l.accuracy)
    val e=tracker.update(r.id,r.revision,result[0].toDouble(),r.radius,today.toString())
    Store.prefs(this).edit().putLong("location_check_revision_${r.id}",r.revision).putString("location_check_${r.id}","${java.time.LocalTime.now().withNano(0)} · 거리 ${result[0].toInt()}m / 반경 ${r.radius.toInt()}m\n${Rules.locationDiagnostic(r,today,result[0].toDouble(),e)}").apply()
    if(r.trigger=="BOTH"){
     if(result[0].toDouble()<=r.radius)Rules.combinedDue(r,java.time.ZonedDateTime.now()).forEach{occurrence->PlaybackService.enqueue(this,r,"TIME",occurrence)}
    }else if(e.fire&&Rules.locationAllowed(r,today))PlaybackService.enqueue(this,r,"LOCATION",today.toString())
   }
+  // Reserve approach time for a fast vehicle before switching to frequent fixes.
+  val interval=when {
+   nearestBoundary>6000 -> 120_000L
+   nearestBoundary>3000 -> 60_000L
+   else -> 15_000L
+  }
+  try{setScanInterval(interval)}catch(_:SecurityException){stopSelf()}
  }
  override fun onProviderDisabled(provider:String){status="위치 신호 대기"}
  override fun onProviderEnabled(provider:String){status="위치 수신 대기"}
